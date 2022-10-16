@@ -5,14 +5,13 @@
 // Use of this source code is governed by a BSD-style license that can be found
 // in the LICENSE file in the root of the source tree.
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // >>
 // >>>  INSIDE THIS FILE
 // >>
 //
-// This is an example single-file stand-alone application that runs a
-// Gobbledegook server.
+// This is an example single-file stand-alone application that runs a Gobbledegook server.
 //
 // >>
 // >>>  DISCUSSION
@@ -91,7 +90,7 @@
 // If it is important to you or your build process that Gobbledegook exist as a library, you are welcome to do so. Just configure
 // your build process to build the Gobbledegook files (minus this file) as a library and link against that instead. All that is
 // required by applications linking to a Gobbledegook library is to include `include/Gobbledegook.h`.
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #include <signal.h>
 #include <iostream>
@@ -99,7 +98,6 @@
 #include <sstream>
 
 #include "../include/Gobbledegook.h"
-#include "SkaleDatServer.h"
 
 //
 // Constants
@@ -109,11 +107,14 @@
 static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 
 //
-// Server data Buffer (Getter/Setter Use)
+// Server data values
 //
 
-// The text string Buffer used To/From Data Server
-static std::string DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F";
+// The battery level ("battery/level") reported by the server (see Server.cpp)
+static uint8_t serverDataBatteryLevel = 78;
+
+// The text string ("text/string") used by our custom text string service (see Server.cpp)
+static std::string serverDataTextString = "Hello, world!";
 
 //
 // Logging
@@ -163,10 +164,10 @@ void signalHandler(int signum)
 }
 
 //
-// Data Server management
+// Server data management
 //
 
-// Called by the ggk server when it wants to retrieve a value 
+// Called by the server when it wants to retrieve a named value
 //
 // This method conforms to `GGKServerDataGetter` and is passed to the server via our call to `ggkStart()`.
 //
@@ -182,26 +183,25 @@ const void *dataGetter(const char *pName)
 
 	std::string strName = pName;
 
-	if ( strName == "ReadNotify" )
+	if (strName == "battery/level")
 	{
-		// Modifica la buffer de datos (String) con la informacion de Skale
-		std::string TmpResp = Skale::getInstance().SkaleResponce();
-		DataTextString = TmpResp;
-		LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
-		return DataTextString.c_str();
+		return &serverDataBatteryLevel;
 	}
-	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
-	{ LogError("Warning Data getter: Write caller requested Data, Null send"); }
-	else  
-	{ LogError((std::string("Data getter, wrong caller name: '") + strName + "'").c_str()); }
+	else if (strName == "text/string")
+	{
+		return serverDataTextString.c_str();
+	}
 
+	LogWarn((std::string("Unknown name for server data getter request: '") + pName + "'").c_str());
 	return nullptr;
 }
+
 // Called by the server when it wants to update a named value
 //
 // This method conforms to `GGKServerDataSetter` and is passed to the server via our call to `ggkStart()`.
 //
-// The server calls this method from its own thread, so we must ensure our implementation is thread-safe. 
+// The server calls this method from its own thread, so we must ensure our implementation is thread-safe. In our case, we're simply
+// sending over stored values, so we don't need to take any additional steps to ensure thread-safety.
 int dataSetter(const char *pName, const void *pData)
 {
 	if (nullptr == pName)
@@ -217,36 +217,29 @@ int dataSetter(const char *pName, const void *pData)
 
 	std::string strName = pName;
 
-	if ( strName == "ReadNotify" )
+	if (strName == "battery/level")
 	{
-		LogError("Warning: ReadNotify caller requested to write Data"); 
-		return 0;
-	}
-	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
-	{ 
-		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
-		DataTextString = static_cast< const char * > (pData);
-		// Copiamos el comando y lo mandamos procesar
-		std::string TmpKomando = DataTextString;
-		if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
-			{ 
-				return 0;
-			} 
-		
-		LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
+		serverDataBatteryLevel = *static_cast<const uint8_t *>(pData);
+		LogDebug((std::string("Server data: battery level set to ") + std::to_string(serverDataBatteryLevel)).c_str());
 		return 1;
 	}
-	else  
-	{ LogError((std::string("Wrong caller name sent to server data settert: '") + strName + "'").c_str());  }
+	else if (strName == "text/string")
+	{
+		serverDataTextString = static_cast<const char *>(pData);
+		LogDebug((std::string("Server data: text string set to '") + serverDataTextString + "'").c_str());
+		return 1;
+	}
 
 	LogWarn((std::string("Unknown name for server data setter request: '") + pName + "'").c_str());
+
 	return 0;
 }
 
 //
 // Entry point
 //
-int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
+
+int main(int argc, char **ppArgv)
 {
 	// A basic command-line parser
 	for (int i = 1; i < argc; ++i)
@@ -273,7 +266,6 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 		}
 	}
 
-
 	// Setup our signal handlers
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
@@ -297,22 +289,21 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 	//     This first parameter (the service name) must match tha name configured in the D-Bus permissions. See the Readme.md file
 	//     for more information.
 	//
-	if (!ggkStart("decentscale", "Decent Scale", "DecentScale", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
+	if (!ggkStart("gobbledegook", "Gobbledegook", "Gobbledegook", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
 	{
 		return -1;
 	}
-	// Other Stuff can be executed while Wait for the servers shutdown process
 
-	
-	/* Se elimina ejemplo de serverDataBatteryLevel
+	// Wait for the server to start the shutdown process
+	//
 	// While we wait, every 15 ticks, drop the battery level by one percent until we reach 0
 	while (ggkGetServerRunState() < EStopping)
 	{
 		std::this_thread::sleep_for(std::chrono::seconds(15));
-		// serverDataBatteryLevel = std::max(serverDataBatteryLevel - 1, 0);
-		// ggkNofifyUpdatedCharacteristic("/com/gobbledegook/battery/level");
+
+		serverDataBatteryLevel = std::max(serverDataBatteryLevel - 1, 0);
+		ggkNofifyUpdatedCharacteristic("/com/gobbledegook/battery/level");
 	}
-	*/
 
 	// Wait for the server to come to a complete stop (CTRL-C from the command line)
 	if (!ggkWait())
