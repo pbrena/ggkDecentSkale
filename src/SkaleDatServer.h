@@ -49,7 +49,7 @@ public:
 	static bool    LedOn;
 	static bool    GramsOn;
 	static bool    TimerOn;
-	static std::string  WeightReport; // 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
+	static std::vector<uint8_t>   WeightReport; // 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
 	//
 	// Constans
 	//
@@ -81,8 +81,8 @@ public:
 	// This method will block until the SkaleCont thread joins
 	static void stop();
 
-	static std::string SkaleResponce();
-	static bool        SkaleProcKmd(std::string SkaleKmd);
+	static std::vector<uint8_t>   SkaleResponce();
+	static bool        SkaleProcKmd(std::vector<uint8_t>   SkaleKmd);
 
 	// Our thread interface, which simply launches our the thread processor on our Skale instance
 	// This mehtod should not be called directly. Rather, it is started with start/stop methods
@@ -110,7 +110,7 @@ private:
 	//
 	// Methods
 	//
-	static void    UtilInserta(int Cual, int16_t Valor, std::string Mensaje);
+	static void    UtilInserta(int Cual, int16_t Valor, std::vector<uint8_t>   Mensaje);
 	static void    UtilTare();
 	static int16_t UtilLeePesoHW();
 

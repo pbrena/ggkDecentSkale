@@ -101,6 +101,8 @@
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"
 
+#include <glib.h>
+
 //
 // Constants
 //
@@ -112,8 +114,11 @@ static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 // Server data Buffer (Getter/Setter Use)
 //
 
-// The text string Buffer used To/From Data Server
+// The text array <char , 7>  Buffer used To/From Data Server
+// static std::string  DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F";
 static std::string DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F";
+std::vector<gchar> DataCharVector = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+// std::vector<uint8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
 
 //
 // Logging
@@ -184,10 +189,12 @@ const void *dataGetter(const char *pName)
 
 	if ( strName == "ReadNotify" )
 	{
-		// Modifica la buffer de datos (String) con la informacion de Skale
-		std::string TmpResp = Skale::getInstance().SkaleResponce();
-		DataTextString = TmpResp;
-		LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
+		// Modifica la buffer de datos (array <char , 7> ) con mensaje de respuesta de Skale
+		// std::vector<int8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+		// std::vector<uint8_t>   TmpResp = Skale::getInstance().SkaleResponce();
+		// DataTextString = TmpResp;
+		// LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
+		// return TmpResp;
 		return DataTextString.c_str();
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
@@ -226,12 +233,13 @@ int dataSetter(const char *pName, const void *pData)
 	{ 
 		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
 		DataTextString = static_cast< const char * > (pData);
-		// Copiamos el comando y lo mandamos procesar
-		std::string TmpKomando = DataTextString;
-		if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
-			{ 
-				return 0;
-			} 
+		// Copiamos el comando y lo mandamos procesar 
+		// std::vector<uint8_t> TmpKomando = DataTextString;
+		std::vector<gchar> TmpKomando = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+		// if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
+			// { 
+			// 	return 0;
+			// } 
 		
 		LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
 		return 1;

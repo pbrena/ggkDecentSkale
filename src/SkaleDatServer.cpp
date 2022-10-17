@@ -14,7 +14,7 @@
 // >>>  DISCUSSION
 // >>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#include <string.h>
+// #include <string.h>
 #include <chrono>
 #include <future>
 
@@ -43,29 +43,29 @@ bool    Skale::LedOn          = false;
 bool    Skale::GramsOn        = true;
 bool    Skale::TimerOn        = false;
 // 03=DecentMark CE=weightstable 0000=weight 0000=Change =XorValidation
-std::string  Skale::WeightReport = "\x03\xCE\x00\x00\x00\x00\xCD"; 
+std::vector<uint8_t>  Skale::WeightReport = {'\x03','\xCE','\x00','\x00','\x00','\x00','\xCD'}; 
 
 // Our Continous thread Updates Skale (Data Server) information
 std::thread Skale::contThread;
 
-std::string Skale::SkaleResponce()
+std::vector<uint8_t>   Skale::SkaleResponce()
 {
 		// Auto-start thead??
 	if (!Skale::contThread.joinable() && !start())
 	{
 		Logger::error("Skale failed to start");
-		return ""; // Null string
+		return {}; // Null array <char , 7> 
 	}
 	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 	std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
 	Logger::trace("SkaleResponce locks Skale Mutex to read");
 	// Actualiza informacion
-	std::string TmpString = Skale::WeightReport; 
+	std::vector<uint8_t>   TmpReport = Skale::WeightReport; 
 	Logger::trace("SkaleResponce about to relese Skale Mutex");
-	return TmpString; 
+	return TmpReport; 
 }
 
-bool Skale::SkaleProcKmd(std::string SkaleKmd)
+bool Skale::SkaleProcKmd(std::vector<uint8_t>   SkaleKmd)
 {
  // Auto-start thead??
 	if (!contThread.joinable() && !start())
@@ -112,7 +112,7 @@ bool Skale::SkaleProcKmd(std::string SkaleKmd)
 
 // pudieran ser private
 
-void Skale::UtilInserta(int Cual, int16_t Valor, std::string Mensaje)
+void Skale::UtilInserta(int Cual, int16_t Valor, std::vector<uint8_t>   Mensaje)
 {
 	char primer = static_cast<char> ((Valor & 0xFF00U) >> 8U);
 	char segund = static_cast<char>  (Valor & 0x00FFU);
@@ -168,7 +168,7 @@ void Skale::runContThread()
 
 	int16_t TmpNuevoPesoRaw;   
 	// 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
-	//	static std::string  WeightReport = "\x03\xCE\x00\x00\x00\x00\xCD"; 
+	//	static array <char , 7>  WeightReport = "\x03\xCE\x00\x00\x00\x00\xCD"; 
 	//                                      0-1o 1-2o 2-Peso 4-Dif   6-xor    
 
 	while ( true )	// Continuo pruebita OJO <---- No todas las actualizaciones se envian al Cliente

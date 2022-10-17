@@ -267,11 +267,14 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 			//  data of any type to be retrieved.  getDataValue in turn calls DataGetter with 
 			//  with idntifier "DecentScale/ReadNotify" to react accordinly so it also can be thought 
 			//  as identifier of what is required to respond
-				std::string TmpResponse = self.getDataValue<std::string>(
-												"ReadNotify",     // Identyifies Caller
-												 ""               // Default value empty string
-												 );
-				self.methodReturnValue(pInvocation, TmpResponse, true);
+				// std::string TmpResponse = self.getDataValue<std::string>(
+				// 								"ReadNotify",     // Identyifies Caller
+				// 								 ""               // Default value empty string
+				// 								 );
+				// std::string TmpResponse = "\x03\xCE\x00\x00\x00\x00\xCD";
+				// self.methodReturnValue(pInvocation, TmpResponse.c_str(), true);
+				std::vector<gchar>   DataCharVector = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+				self.methodReturnValue(pInvocation, DataCharVector, true);
 			})
 
 			// Here we use the onUpdatedValue to set a callback that isn't exposed to BlueZ, but rather allows us to manage
