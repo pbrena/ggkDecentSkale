@@ -101,8 +101,6 @@
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"
 
-#include <glib.h>
-
 //
 // Constants
 //
@@ -114,10 +112,8 @@ static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 // Server data Buffer (Getter/Setter Use)
 //
 
-// The text array <char , 7>  Buffer used To/From Data Server
-// static std::string  DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F";
-static std::string DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F";
-std::vector<gchar> DataCharVector = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+// static std::string  DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F"; // Falla con ceros
+static std::vector<guint8> DataCharVector = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 // std::vector<uint8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
 
 //
@@ -189,13 +185,15 @@ const void *dataGetter(const char *pName)
 
 	if ( strName == "ReadNotify" )
 	{
-		// Modifica la buffer de datos (array <char , 7> ) con mensaje de respuesta de Skale
-		// std::vector<int8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
-		// std::vector<uint8_t>   TmpResp = Skale::getInstance().SkaleResponce();
 		// DataTextString = TmpResp;
+		// Modifica buffer de datos con mensaje de respuesta de Skale
+		DataCharVector  = Skale::getInstance().SkaleResponce();
+		// In C++11, a new member function was added to std::vector: data(). This member function returns the 
+		// address of the initial element in the container, just like &vector.front(). The advantage of this
+		// member function is that it is okay to call it even if the container is empty.
+		return DataCharVector.data();
 		// LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
-		// return TmpResp;
-		return DataTextString.c_str();
+		// return DataTextString.c_str();
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
 	{ LogError("Warning Data getter: Write caller requested Data, Null send"); }
@@ -232,16 +230,16 @@ int dataSetter(const char *pName, const void *pData)
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
 	{ 
 		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
-		DataTextString = static_cast< const char * > (pData);
+		// DataTextString = static_cast< const char * > (pData);
 		// Copiamos el comando y lo mandamos procesar 
 		// std::vector<uint8_t> TmpKomando = DataTextString;
-		std::vector<gchar> TmpKomando = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+		std::vector<guint8> TmpKomando = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 		// if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
 			// { 
 			// 	return 0;
 			// } 
 		
-		LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
+		// LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
 		return 1;
 	}
 	else  

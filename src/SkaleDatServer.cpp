@@ -42,33 +42,33 @@ int16_t Skale::DiferenciaPeso = 0x0000;
 bool    Skale::LedOn          = false;
 bool    Skale::GramsOn        = true;
 bool    Skale::TimerOn        = false;
-// 03=DecentMark CE=weightstable 0000=weight 0000=Change =XorValidation
-std::vector<uint8_t>  Skale::WeightReport = {'\x03','\xCE','\x00','\x00','\x00','\x00','\xCD'}; 
+//  03=DecentMark CE=weightstable x0000=weight x0000=Change =XorValidation
+std::vector<guint8> Skale::WeightReport = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
 
 // Our Continous thread Updates Skale (Data Server) information
 std::thread Skale::contThread;
 
-std::vector<uint8_t>   Skale::SkaleResponce()
+std::vector<guint8> Skale::SkaleResponce()
 {
 		// Auto-start thead??
-	if (!Skale::contThread.joinable() && !start())
+	if (!Skale::contThread.joinable() && !Skale::start())
 	{
 		Logger::error("Skale failed to start");
-		return {}; // Null array <char , 7> 
+		return {}; // Null vector
 	}
 	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 	std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
 	Logger::trace("SkaleResponce locks Skale Mutex to read");
 	// Actualiza informacion
-	std::vector<uint8_t>   TmpReport = Skale::WeightReport; 
+	std::vector<guint8> TmpReport = Skale::WeightReport; 
 	Logger::trace("SkaleResponce about to relese Skale Mutex");
 	return TmpReport; 
 }
 
-bool Skale::SkaleProcKmd(std::vector<uint8_t>   SkaleKmd)
+bool Skale::SkaleProcKmd(std::vector<guint8> SkaleKmd)
 {
  // Auto-start thead??
-	if (!contThread.joinable() && !start())
+	if (!contThread.joinable() && !Skale::start())
 	{
 		Logger::error("Skale failed to start");
 		return false;
@@ -81,13 +81,13 @@ bool Skale::SkaleProcKmd(std::vector<uint8_t>   SkaleKmd)
 	{ 
 		Logger::trace("SkaleProcKmd: Kmd Wrong Parity");
 		return false; 
-	}                              // command corrupted --> Abort
+	}                                 // command corrupted --> Abort
  // Otherwise... process
  // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 	std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
 	Logger::trace("SkaleResponce locks Skale Mutex to read");
  
- 	char leeKmd = SkaleKmd[1];
+ 	guint8 leeKmd = SkaleKmd[1];
 	switch( leeKmd ) {
 		case kSkaleTareKmd:     //UtilTare
 			Skale::getInstance().UtilTare();
@@ -110,9 +110,9 @@ bool Skale::SkaleProcKmd(std::vector<uint8_t>   SkaleKmd)
 	return true;
 }
 
-// pudieran ser private
+// pudieran ser private ?
 
-void Skale::UtilInserta(int Cual, int16_t Valor, std::vector<uint8_t>   Mensaje)
+void Skale::UtilInserta(int Cual, int16_t Valor, std::vector<guint8> Mensaje)
 {
 	char primer = static_cast<char> ((Valor & 0xFF00U) >> 8U);
 	char segund = static_cast<char>  (Valor & 0x00FFU);
@@ -128,7 +128,7 @@ void Skale::UtilTare()
 	Logger::trace("Skale UtilTare locks Skale Mutex to Udate");
 	// Actualiza informacion de Tara
 	// 	Skale::PesoRaw	       = ????                 Peso actual se asume actualizado
-	Skale::PesoConTara	   = 0x0000;           // Se reportara Cero
+	Skale::PesoConTara	  = 0x0000;           // Se reportara Cero
 	Skale::OffsetPaTara   = Skale::PesoRaw;          // PesoCrudo actual es la nueva base (offset)
 	Skale::DiferenciaPeso = 0x0000;
  // Se asume estabilidad x un momento
@@ -138,7 +138,7 @@ void Skale::UtilTare()
  //	WeightReport[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
 	Skale::UtilInserta(difer, Skale::DiferenciaPeso, Skale::WeightReport);	           
 	// Calcular y actualizar nueva paridad
-	char TmpXor = Skale::WeightReport[0];        
+	guint8 TmpXor = Skale::WeightReport[0];        
 	for(int i=1; i<=5; i++)  // Calcula xor
 		{ TmpXor = TmpXor ^ Skale::WeightReport[i]; }
 	Skale::WeightReport[6] = TmpXor;
@@ -217,7 +217,7 @@ void Skale::runContThread()
 			 // Si ahora es inestable...
 			 // Se necesita actualizar TODO peso a reportar Y DIFERENCIA
 			 // por cierto la DIFERENCIA siempre cambia, se actualiza WeightReport mas abajo
-				Skale::PesoConTara      = TmpNuevoPesoRaw - Skale::OffsetPaTara;
+				Skale::PesoConTara     = TmpNuevoPesoRaw - Skale::OffsetPaTara;
 				Skale::UtilInserta(peso, Skale::PesoConTara, Skale::WeightReport);  // diunaves 
 			 // Recordar estado actual
 				Skale::DiferenciaPeso  = TmpNuevoPesoRaw - Skale::PesoRaw; // se actualiza WeightReport mas abajo
@@ -228,7 +228,7 @@ void Skale::runContThread()
 			Skale::UtilInserta(difer, Skale::DiferenciaPeso, WeightReport);	
 		 //	WeightReport[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
 		 // Calcular y actualizar nueva paridad
-			char TmpXor = Skale::WeightReport[0];        
+			guint8 TmpXor = Skale::WeightReport[0];        
 			for(int i=1; i<=5; i++)  // Calcula xor
 				{ TmpXor = TmpXor ^ Skale::WeightReport[i]; }
 			Skale::WeightReport[6] = TmpXor;
@@ -238,7 +238,7 @@ void Skale::runContThread()
 	 // The caller may choose to consult getActiveConnectionCount in order to determine 
 	 // if there are any active connections before sending a change notification.
 	 // active connections = Notifications ???, Probablemente No
-	 	if ( HciAdapter::getInstance().getActiveConnectionCount() != 0 ) { 
+	 	if ( 0 !=  HciAdapter::getInstance().getActiveConnectionCount() ) { 
 		ggkNofifyUpdatedCharacteristic("/com/decentscale/DecentScale/ReadNotify");
 	 	} 
 	}

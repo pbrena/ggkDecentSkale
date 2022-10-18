@@ -264,17 +264,17 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 			.onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA
 			{
 			//  getDataValue gets a named value from the server datais a templated to allow non-pointer 
-			//  data of any type to be retrieved.  getDataValue in turn calls DataGetter with 
-			//  with idntifier "DecentScale/ReadNotify" to react accordinly so it also can be thought 
-			//  as identifier of what is required to respond
-				// std::string TmpResponse = self.getDataValue<std::string>(
-				// 								"ReadNotify",     // Identyifies Caller
-				// 								 ""               // Default value empty string
-				// 								 );
-				// std::string TmpResponse = "\x03\xCE\x00\x00\x00\x00\xCD";
-				// self.methodReturnValue(pInvocation, TmpResponse.c_str(), true);
-				std::vector<gchar>   DataCharVector = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
-				self.methodReturnValue(pInvocation, DataCharVector, true);
+			//  data of any type to be retrieved.  getDataValue in turn calls DataGetter with identifier
+			//  "ReadNotify" to react accordinly so it also can be thought as identifier of what is required
+			//  to respond
+				std::vector<guint8> TmpResponse = self.getDataValue< std::vector<guint8> >
+												(
+												  "ReadNotify",     // Identyifies Caller
+												   {}               // Default value empty vector
+												);
+				// std::vector<guint8> DataCharVector = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+				// std::vector<guint8> DataCharVector = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
+				self.methodReturnValue(pInvocation, TmpResponse, true);
 			})
 
 			// Here we use the onUpdatedValue to set a callback that isn't exposed to BlueZ, but rather allows us to manage
@@ -283,10 +283,11 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 			// We can handle updates in any way we wish, but the most common use is to send a change notification.
 			.onUpdatedValue(CHARACTERISTIC_UPDATED_VALUE_CALLBACK_LAMBDA
 			{
-				std::string TmpResponse = self.getDataValue<std::string>(
-												"ReadNotify",      // Identyifies Caller
-												 ""                // Default value empty string
-												 );
+				std::vector<guint8> TmpResponse = self.getDataValue< std::vector<guint8> >
+												(
+												  "ReadNotify",     // Identyifies Caller
+												   {}               // Default value empty vector
+												);
 				self.sendChangeNotificationValue(pConnection, TmpResponse); // Send "Changed" Notif value
 				return true;   //  porque ????
 			})
@@ -323,7 +324,7 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 				// Convertirlo a String y pasarlo como Pointer 
 				// Update the text string value
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
-				// Puebita sin Pointer
+				// Pruebita sin Pointer
 				self.setDataValue("WriteBack", Utils::stringFromGVariantByteArray(pAyBuffer));
 
 				// Note: Even though the WriteValue method returns void, it's important to return like this, so that a
