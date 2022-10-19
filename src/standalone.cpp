@@ -109,11 +109,11 @@
 static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 
 //
-// Server data Buffer (Getter/Setter Use)
+// Server data Buffer (Getter/Setter Use) Antes: Server data values
 //
 
+static std::vector<guint8> DataServCharVectorBuffr = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 // static std::string  DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F"; // Falla con ceros
-static std::vector<guint8> DataCharVector = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 // std::vector<uint8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
 
 //
@@ -187,11 +187,11 @@ const void *dataGetter(const char *pName)
 	{
 		// DataTextString = TmpResp;
 		// Modifica buffer de datos con mensaje de respuesta de Skale
-		DataCharVector  = Skale::getInstance().SkaleResponce();
+		DataServCharVectorBuffr  = Skale::getInstance().SkaleResponce();
 		// In C++11, a new member function was added to std::vector: data(). This member function returns the 
 		// address of the initial element in the container, just like &vector.front(). The advantage of this
 		// member function is that it is okay to call it even if the container is empty.
-		return DataCharVector.data();
+		return DataServCharVectorBuffr.data();
 		// LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
 		// return DataTextString.c_str();
 	}
@@ -227,23 +227,27 @@ int dataSetter(const char *pName, const void *pData)
 		LogError("Warning: ReadNotify caller requested to write Data"); 
 		return 0;
 	}
-	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
+	else if ( strName == "WriteWoResp" || strName ==  "WriteBack")
 	{ 
+		std::vector<guint8> Kompara = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD} ;
 		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
-		// DataTextString = static_cast< const char * > (pData);
-		// Copiamos el comando y lo mandamos procesar 
-		// std::vector<uint8_t> TmpKomando = DataTextString;
-		std::vector<guint8> TmpKomando = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
-		// if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
-			// { 
-			// 	return 0;
-			// } 
-		
-		// LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
+		DataServCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
+		if ( Kompara ==  DataServCharVectorBuffr )
+			{ 
+			LogInfo("<<<<<<<Sssssssiiiii>>>>>>>>>>>>>>>");
+			} 
+		 //  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
+		 // Ojo llama al procesador de comandos que es boolano
+		if ( !Skale::getInstance().SkaleProcKmd(DataServCharVectorBuffr) )
+			{ 
+				LogError("Warning: SkaleProcKmd -> false, fallo"); 
+				return 0; 
+			} 
+		//  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
 		return 1;
 	}
 	else  
-	{ LogError((std::string("Wrong caller name sent to server data settert: '") + strName + "'").c_str());  }
+	{ LogError((std::string("Wrong caller name sent to server data setter: '") + strName + "'").c_str());  }
 
 	LogWarn((std::string("Unknown name for server data setter request: '") + pName + "'").c_str());
 	return 0;
