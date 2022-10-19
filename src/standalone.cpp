@@ -109,11 +109,11 @@
 static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 
 //
-// Server data Buffer (Getter/Setter Use)
+// Server data Buffer (Getter/Setter Use) Antes: Server data values
 //
 
+static std::vector<guint8> DataServCharVectorBuffr = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 // static std::string  DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F"; // Falla con ceros
-static std::vector<guint8> DataCharVector = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 // std::vector<uint8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
 
 //
@@ -187,11 +187,11 @@ const void *dataGetter(const char *pName)
 	{
 		// DataTextString = TmpResp;
 		// Modifica buffer de datos con mensaje de respuesta de Skale
-		DataCharVector  = Skale::getInstance().SkaleResponce();
+		DataServCharVectorBuffr  = Skale::getInstance().SkaleResponce();
 		// In C++11, a new member function was added to std::vector: data(). This member function returns the 
 		// address of the initial element in the container, just like &vector.front(). The advantage of this
 		// member function is that it is okay to call it even if the container is empty.
-		return DataCharVector.data();
+		return DataServCharVectorBuffr.data();
 		// LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
 		// return DataTextString.c_str();
 	}
@@ -230,15 +230,57 @@ int dataSetter(const char *pName, const void *pData)
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
 	{ 
 		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
-		// DataTextString = static_cast< const char * > (pData);
-		// Copiamos el comando y lo mandamos procesar 
-		// std::vector<uint8_t> TmpKomando = DataTextString;
+		DataServCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
 		std::vector<guint8> TmpKomando = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
+		if ( TmpKomando ==  DataServCharVectorBuffr )
+			{ 
+			LogInfo("<<<<<<<Sssssssiiiii>>>>>>>>>>>>>>>");
+			} 
+		
+		// LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
 		// if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
 			// { 
 			// 	return 0;
 			// } 
+		/*
+		// serverDataTextString = static_cast<const char *>(pData);
+			// gsize size;
+			// gconstpointer pPtr = g_variant_get_fixed_array(const_cast<GVariant *>(pVariant), &size, 1);
+			// std::vector<guint8> array(size + 1, 0);
+			// memcpy(array.data(), pPtr, size);
+			// return array;
+		// DataTextString = static_cast< const char * > (pData);
+		// Copiamos el comando y lo mandamos procesar 
+		// std::vector<uint8_t> TmpKomando = DataTextString;
 		
+	// Return a data value from the server's registered data getter (GGKServerDataGetter)
+	//
+	// This method is for use with non-pointer types. For pointer types, use `getDataPointer()` instead.
+	//
+	// This method is intended to be used in the server description. An example usage would be:
+	//
+	//     uint8_t batteryLevel = self.getDataValue<uint8_t>("battery/level", 0);
+	template<typename T>
+	T getDataValue(const char *pName, const T defaultValue) const
+	{
+		const void *pData = TheServer->getDataGetter()(pName);
+		return nullptr == pData ? defaultValue : *static_cast<const T *>(pData);
+	}
+	// Sends a data value from the server back to the application through the server's registered data setter
+	// (GGKServerDataSetter)
+	//
+	// This method is for use with non-pointer types. For pointer types, use `setDataPointer()` instead.
+	//
+	// This method is intended to be used in the server description. An example usage would be:
+	//
+	//     self.setDataValue("battery/level", batteryLevel);
+	template<typename T>
+	bool setDataValue(const char *pName, const T value) const
+	{
+		return TheServer->getDataSetter()(pName, static_cast<const void *>(&value)) != 0;
+	}
+
+		*/
 		// LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
 		return 1;
 	}

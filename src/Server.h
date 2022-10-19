@@ -242,4 +242,10 @@ private:
 // Our one and only server. It's a global.
 extern std::shared_ptr<Server> TheServer;
 
+// Basado en Utils::stringFromGVariantByteArray
+// Extracts a VECTOR from an array of bytes ("ay")
+std::vector<guint8> vectorFromGVariantByteArray(const GVariant *pVariant);
+/*   <<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>
+*/
+
 }; // namespace ggk

@@ -304,12 +304,16 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 				// Convertirlo a String y pasarlo como Pointer 
 				// Update the text string value
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
-				self.setDataPointer("WriteWoResp", Utils::stringFromGVariantByteArray(pAyBuffer).c_str());
+				std::vector<guint8> TmpKmd = vectorFromGVariantByteArray(pAyBuffer);
+				self.setDataValue("WriteWoResp", TmpKmd);
+
+				// self.setDataPointer("WriteWoResp", Utils::stringFromGVariantByteArray(pAyBuffer).c_str());
+				// Original self.setDataPointer("WriteWoResp", Utils::stringFromGVariantByteArray(pAyBuffer).c_str());
 
 				// Note: Even though the WriteValue method returns void, it's important to return like this, so that a
 				// dbus "method_return" is sent, otherwise the client gets an error (ATT error code 0x0e"unlikely").
 				// Only "write-without-response" works without this
-				self.methodReturnVariant(pInvocation, NULL);
+				// self.methodReturnVariant(pInvocation, NULL);
 			})
 
 		.gattCharacteristicEnd()
@@ -324,8 +328,14 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 				// Convertirlo a String y pasarlo como Pointer 
 				// Update the text string value
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
+				// std::vector<guint8> TmpKmd = vectorFromGVariantByteArray(pAyBuffer);
+				self.setDataValue("WriteBack", vectorFromGVariantByteArray(pAyBuffer));
+				// Esto parece extraer el valor escrito y recibido en Parametros con indice 0
+				// Convertirlo a String y pasarlo como Pointer 
+				// Update the text string value
+				// GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
 				// Pruebita sin Pointer
-				self.setDataValue("WriteBack", Utils::stringFromGVariantByteArray(pAyBuffer));
+				// self.setDataValue("WriteBack", Utils::stringFromGVariantByteArray(pAyBuffer));
 
 				// Note: Even though the WriteValue method returns void, it's important to return like this, so that a
 				// dbus "method_return" is sent, otherwise the client gets an error (ATT error code 0x0e"unlikely").
@@ -455,5 +465,20 @@ const GattProperty *Server::findProperty(const DBusObjectPath &objectPath, const
 
 	return nullptr;
 }
+
+
+// Basado en Utils::stringFromGVariantByteArray
+// Extracts a VECTOR from an array of bytes ("ay")
+std::vector<guint8> vectorFromGVariantByteArray(const GVariant *pVariant)
+{
+	gsize size;
+	gconstpointer pPtr = g_variant_get_fixed_array(const_cast<GVariant *>(pVariant), &size, 1);
+	std::vector<guint8> array(size + 1, 0);
+	memcpy(array.data(), pPtr, size);
+	return array;
+}
+/*   <<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>
+*/
+
 
 }; // namespace ggk
