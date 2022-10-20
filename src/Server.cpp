@@ -328,7 +328,6 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 				// Convertirlo a String y pasarlo como Pointer 
 				// Update the text string value
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
-				// std::vector<guint8> TmpKmd = vectorFromGVariantByteArray(pAyBuffer);
 				self.setDataValue("WriteBack", vectorFromGVariantByteArray(pAyBuffer));
 				// Esto parece extraer el valor escrito y recibido en Parametros con indice 0
 				// Convertirlo a String y pasarlo como Pointer 

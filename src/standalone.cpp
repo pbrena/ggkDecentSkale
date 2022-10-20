@@ -227,65 +227,27 @@ int dataSetter(const char *pName, const void *pData)
 		LogError("Warning: ReadNotify caller requested to write Data"); 
 		return 0;
 	}
-	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
+	else if ( strName == "WriteWoResp" || strName ==  "WriteBack")
 	{ 
+		std::vector<guint8> Kompara = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD} ;
 		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
 		DataServCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
-		std::vector<guint8> TmpKomando = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
-		if ( TmpKomando ==  DataServCharVectorBuffr )
+		if ( Kompara ==  DataServCharVectorBuffr )
 			{ 
 			LogInfo("<<<<<<<Sssssssiiiii>>>>>>>>>>>>>>>");
 			} 
-		
-		// LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
-		// if ( !Skale::getInstance().SkaleProcKmd(TmpKomando) )
-			// { 
-			// 	return 0;
-			// } 
-		/*
-		// serverDataTextString = static_cast<const char *>(pData);
-			// gsize size;
-			// gconstpointer pPtr = g_variant_get_fixed_array(const_cast<GVariant *>(pVariant), &size, 1);
-			// std::vector<guint8> array(size + 1, 0);
-			// memcpy(array.data(), pPtr, size);
-			// return array;
-		// DataTextString = static_cast< const char * > (pData);
-		// Copiamos el comando y lo mandamos procesar 
-		// std::vector<uint8_t> TmpKomando = DataTextString;
-		
-	// Return a data value from the server's registered data getter (GGKServerDataGetter)
-	//
-	// This method is for use with non-pointer types. For pointer types, use `getDataPointer()` instead.
-	//
-	// This method is intended to be used in the server description. An example usage would be:
-	//
-	//     uint8_t batteryLevel = self.getDataValue<uint8_t>("battery/level", 0);
-	template<typename T>
-	T getDataValue(const char *pName, const T defaultValue) const
-	{
-		const void *pData = TheServer->getDataGetter()(pName);
-		return nullptr == pData ? defaultValue : *static_cast<const T *>(pData);
-	}
-	// Sends a data value from the server back to the application through the server's registered data setter
-	// (GGKServerDataSetter)
-	//
-	// This method is for use with non-pointer types. For pointer types, use `setDataPointer()` instead.
-	//
-	// This method is intended to be used in the server description. An example usage would be:
-	//
-	//     self.setDataValue("battery/level", batteryLevel);
-	template<typename T>
-	bool setDataValue(const char *pName, const T value) const
-	{
-		return TheServer->getDataSetter()(pName, static_cast<const void *>(&value)) != 0;
-	}
-
-		*/
-		// LogDebug((std::string("Server data: komand string received: '") + DataTextString + "'").c_str());
+		 //  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
+		 // Ojo llama al procesador de comandos que es boolano
+		if ( !Skale::getInstance().SkaleProcKmd(DataServCharVectorBuffr) )
+			{ 
+				LogError("Warning: SkaleProcKmd -> false, fallo"); 
+				return 0; 
+			} 
+		//  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
 		return 1;
 	}
 	else  
-	{ LogError((std::string("Wrong caller name sent to server data settert: '") + strName + "'").c_str());  }
+	{ LogError((std::string("Wrong caller name sent to server data setter: '") + strName + "'").c_str());  }
 
 	LogWarn((std::string("Unknown name for server data setter request: '") + pName + "'").c_str());
 	return 0;
