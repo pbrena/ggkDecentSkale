@@ -236,6 +236,13 @@ int dataSetter(const char *pName, const void *pData)
 			{ 
 			LogInfo("<<<<<<<Sssssssiiiii>>>>>>>>>>>>>>>");
 			} 
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[0]);
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[1]);
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[2]);
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[3]);
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[4]);
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[5]);
+			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[6]);
 		 //  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
 		 // Ojo llama al procesador de comandos que es boolano
 		if ( !Skale::getInstance().SkaleProcKmd(DataServCharVectorBuffr) )
@@ -307,29 +314,28 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 	//     This first parameter (the service name) must match tha name configured in the D-Bus permissions. See the Readme.md file
 	//     for more information.
 	//
+	// The so called (Gatt) Server  (different from Data Server)
 	if (!ggkStart("decentscale", "Decent Scale", "DecentScale", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
 	{
 		return -1;
 	}
-	// Other Stuff can be executed while Wait for the servers shutdown process
-
-	
-	/* Se elimina ejemplo de serverDataBatteryLevel
-	// While we wait, every 15 ticks, drop the battery level by one percent until we reach 0
-	while (ggkGetServerRunState() < EStopping)
+	 // Other Stuff can be executed while Wait for the servers shutdown process
+     
+	 // Start the (Skale) Data server Continous process in its own Thread
+	if (!Skale::getInstance().start())
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(15));
-		// serverDataBatteryLevel = std::max(serverDataBatteryLevel - 1, 0);
-		// ggkNofifyUpdatedCharacteristic("/com/gobbledegook/battery/level");
+		return -1;
 	}
-	*/
-
 	// Wait for the server to come to a complete stop (CTRL-C from the command line)
 	if (!ggkWait())
 	{
 		return -1;
+	}	
+	// Stop Data Server
+	if (!Skale::getInstance().stop())
+	{
+		return -1;
 	}
-
 	// Return the final server health status as a success (0) or error (-1)
   	return ggkGetServerHealth() == EOk ? 0 : 1;
 }

@@ -38,6 +38,7 @@ public:
 	// Used or sake of Thread-safety <<<---
 	static std::mutex SkaleMutex;
 
+	static bool    TerminaCont;  // bandera para terminar ciclo continuo
 	static int16_t PesoRaw;      // Grams * 10
 	static int16_t PesoRawAntes;
 	static int16_t PesoConTara;
@@ -75,7 +76,7 @@ public:
 	// Returns true if the Skale thread initiates otherwise false
 	static bool start();
 	// This method will block until the SkaleCont thread joins
-	static void stop();
+	static bool stop();
 
 	static std::vector<guint8> SkaleResponce();
 	static bool SkaleProcKmd(std::vector<guint8>   SkaleKmd);
