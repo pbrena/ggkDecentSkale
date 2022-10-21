@@ -24,8 +24,8 @@
 #include <thread>
 #include <mutex>
 
-#include <glib.h>
-#include <random>
+#include <glib.h> // Para acceder a GVariant
+#include <random> // Temporal pa generar simulacion de Peso
 
 class Skale
 {

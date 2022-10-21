@@ -232,7 +232,7 @@ int dataSetter(const char *pName, const void *pData)
 				LogError("Warning: SkaleProcKmd -> false, fallo"); 
 				return 0; 
 			} 
-		LogDebug((std::string("Server data: komand vector received: '")).c_str());
+		LogDebug((std::string("Server data: komand vector received")).c_str());
 		return 1;
 	}
 	else  
