@@ -272,8 +272,6 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 												  "ReadNotify",     // Identyifies Caller
 												   {}               // Default value empty vector
 												);
-				// std::vector<guint8> DataCharVector = {'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
-				// std::vector<guint8> DataCharVector = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
 				self.methodReturnValue(pInvocation, TmpResponse, true);
 			})
 
@@ -301,14 +299,10 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 			.onWriteValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA
 			{
 				// Esto parece extraer el valor escrito y recibido en Parametros con indice 0
-				// Convertirlo a String y pasarlo como Pointer 
-				// Update the text string value
+				// Convertirlo a Vector y enviarlo al Data Server
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
 				std::vector<guint8> TmpKmd = vectorFromGVariantByteArray(pAyBuffer);
 				self.setDataValue("WriteWoResp", TmpKmd);
-
-				// self.setDataPointer("WriteWoResp", Utils::stringFromGVariantByteArray(pAyBuffer).c_str());
-				// Original self.setDataPointer("WriteWoResp", Utils::stringFromGVariantByteArray(pAyBuffer).c_str());
 
 				// Note: Even though the WriteValue method returns void, it's important to return like this, so that a
 				// dbus "method_return" is sent, otherwise the client gets an error (ATT error code 0x0e"unlikely").
@@ -325,16 +319,9 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 			.onWriteValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA
 			{
 				// Esto parece extraer el valor escrito y recibido en Parametros con indice 0
-				// Convertirlo a String y pasarlo como Pointer 
-				// Update the text string value
+				// Convertirlo a Vector y enviarlo al Data Server
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
 				self.setDataValue("WriteBack", vectorFromGVariantByteArray(pAyBuffer));
-				// Esto parece extraer el valor escrito y recibido en Parametros con indice 0
-				// Convertirlo a String y pasarlo como Pointer 
-				// Update the text string value
-				// GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
-				// Pruebita sin Pointer
-				// self.setDataValue("WriteBack", Utils::stringFromGVariantByteArray(pAyBuffer));
 
 				// Note: Even though the WriteValue method returns void, it's important to return like this, so that a
 				// dbus "method_return" is sent, otherwise the client gets an error (ATT error code 0x0e"unlikely").

@@ -185,15 +185,10 @@ const void *dataGetter(const char *pName)
 
 	if ( strName == "ReadNotify" )
 	{
-		// DataTextString = TmpResp;
 		// Modifica buffer de datos con mensaje de respuesta de Skale
 		DataServCharVectorBuffr  = Skale::getInstance().SkaleResponce();
-		// In C++11, a new member function was added to std::vector: data(). This member function returns the 
-		// address of the initial element in the container, just like &vector.front(). The advantage of this
-		// member function is that it is okay to call it even if the container is empty.
-		return DataServCharVectorBuffr.data();
-		// LogDebug((std::string("Data getter: buffer text string set to '") + DataTextString + "'").c_str());
-		// return DataTextString.c_str();
+		LogDebug("Data getter: current &DataServCharVectorBuffr replied"); 
+		return &DataServCharVectorBuffr;
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
 	{ LogError("Warning Data getter: Write caller requested Data, Null send"); }
@@ -229,28 +224,15 @@ int dataSetter(const char *pName, const void *pData)
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack")
 	{ 
-		std::vector<guint8> Kompara = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD} ;
-		// Aqui parace resolver el valor enviado (string) por el write a partir del apuntador
+		// Aqui parace resolver el valor enviado (vector) por el write a partir del apuntador
 		DataServCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
-		if ( Kompara ==  DataServCharVectorBuffr )
-			{ 
-			LogInfo("<<<<<<<Sssssssiiiii>>>>>>>>>>>>>>>");
-			} 
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[0]);
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[1]);
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[2]);
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[3]);
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[4]);
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[5]);
-			LogInfo("<<<<<<<no>>>>>>>>>>>>>>>" + DataServCharVectorBuffr[6]);
-		 //  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
 		 // Ojo llama al procesador de comandos que es boolano
 		if ( !Skale::getInstance().SkaleProcKmd(DataServCharVectorBuffr) )
 			{ 
 				LogError("Warning: SkaleProcKmd -> false, fallo"); 
 				return 0; 
 			} 
-		//  LogDebug((std::string("Server data: komand string received: '") + DataServCharVectorBuffr + "'").c_str());
+		LogDebug((std::string("Server data: komand vector received: '")).c_str());
 		return 1;
 	}
 	else  
