@@ -260,7 +260,6 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 		// for various purposes like parameter to distiguish caller and to use correct Methods
 		.gattCharacteristicBegin("ReadNotify", "0000FFF4-0000-1000-8000-00805F9B34FB", {"read", "notify"})
 
-			// Standard characteristic "ReadValue" method call
 			.onReadValue(CHARACTERISTIC_METHOD_CALLBACK_LAMBDA
 			{
 			//  getDataValue gets a named value from the server datais a templated to allow non-pointer 
@@ -268,25 +267,24 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 			//  "ReadNotify" to react accordinly so it also can be thought as identifier of what is required
 			//  to respond
 				std::vector<guint8> TmpResponse = self.getDataValue< std::vector<guint8> >
-												(
-												  "ReadNotify",     // Identyifies Caller
-												   {}               // Default value empty vector
-												);
+												( "ReadNotify",     // Identyifies Caller
+												   {}  	);          // Default value empty vector
 				self.methodReturnValue(pInvocation, TmpResponse, true);
 			})
 
-			// Here we use the onUpdatedValue to set a callback that isn't exposed to BlueZ, but rather allows us to manage
-			// updates to our value. These updates may have come from our own server or some other source.
-			//
-			// We can handle updates in any way we wish, but the most common use is to send a change notification.
+			// Is flagged by The Scale Data Server each 1/10 of a sec.
 			.onUpdatedValue(CHARACTERISTIC_UPDATED_VALUE_CALLBACK_LAMBDA
 			{
-				std::vector<guint8> TmpResponse = self.getDataValue< std::vector<guint8> >
-												(
-												  "ReadNotify",     // Identyifies Caller
-												   {}               // Default value empty vector
-												);
-				self.sendChangeNotificationValue(pConnection, TmpResponse); // Send "Changed" Notif value
+				// ...but only sends a change notification if it is determined that there are any active 
+				// connections at all with getActiveConnectionCount() 
+				if ( 0 < HciAdapter::getInstance().getActiveConnectionCount() ) 
+				{ 
+				 // get message to be send back from The Scale Data Server
+					std::vector<guint8> TmpResponse = self.getDataValue< std::vector<guint8> >
+													( "ReadNotify",     // Identyifies Caller
+													{}  	);          // Default value empty vector			
+					self.sendChangeNotificationValue(pConnection, TmpResponse); 
+				} 
 				return true;   //  porque ????
 			})
 
@@ -301,8 +299,7 @@ Server::Server(const std::string &serviceName, const std::string &advertisingNam
 				// Esto parece extraer el valor escrito y recibido en Parametros con indice 0
 				// Convertirlo a Vector y enviarlo al Data Server
 				GVariant *pAyBuffer = g_variant_get_child_value(pParameters, 0);
-				std::vector<guint8> TmpKmd = vectorFromGVariantByteArray(pAyBuffer);
-				self.setDataValue("WriteWoResp", TmpKmd);
+				self.setDataValue("WriteBack", vectorFromGVariantByteArray(pAyBuffer));
 
 				// Note: Even though the WriteValue method returns void, it's important to return like this, so that a
 				// dbus "method_return" is sent, otherwise the client gets an error (ATT error code 0x0e"unlikely").
