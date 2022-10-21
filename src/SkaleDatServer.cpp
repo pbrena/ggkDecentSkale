@@ -34,7 +34,7 @@ using ggk::HciAdapter;
 
 std::mutex Skale::SkaleMutex; // explicit intiialization might be needed
 // Variable initial values
-bool    Skale::TerminaCont    = false;       // bandera para terminar ciclo continuo
+bool    Skale::BanderaCiclo    = true;       // bandera para mantener ciclo continuo
 int16_t Skale::PesoRaw        = 0x0000;      // Grams * 10
 int16_t Skale::PesoRawAntes   = 0x0000;
 int16_t Skale::PesoConTara    = 0x0000;
@@ -62,7 +62,7 @@ std::vector<guint8> Skale::SkaleResponce()
 	std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
 	// Read informacion
 	std::vector<guint8> TmpReport = Skale::WeightReport; 
-	Logger::trace("Skale Responce about to relese Skale Mutex");
+	Logger::trace("Skale Responce relesing Skale Mutex");
 	return TmpReport; 
 }
 
@@ -178,8 +178,9 @@ void Skale::runContThread()
 	// 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
 	//	"\x03\xCE\x00\x00\x00\x00\xCD"; 
 	//  0-1o 1-2o 2-Peso 4-Dif   6-xor    
-
-	while (!TerminaCont) // Semi Continuo  OJO <---- No todas las actualizaciones se envian al Cliente
+	bool BanderaLocal = true; // Continua ciclo?
+	
+	while (BanderaLocal) // Semi Continuo  OJO <---- No todas las actualizaciones se envian al Cliente
 	{
 		// Pace the cicles to avoid waist CPU
 		std::this_thread::sleep_for(std::chrono::milliseconds(kRescanTimeMS));
@@ -188,12 +189,11 @@ void Skale::runContThread()
 
 		if ( true )    // Solo para limitar scope
 		{
-		 // Ahora si se Actualiza Informacion
-			// Logger::trace("runCont Thread locks Skale Mutex to Update");
 			std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
 
-		 // Cambio PesoRaw???
+		 	BanderaLocal = BanderaCiclo; // Actualiza desde Bandera Global
 		 // Ojo: No asumir que si ahora es igual siempre a sido igual,  pudo haber sido inestable
+		 // Cambio PesoRaw???
 			if ( TmpNuevoPesoRaw == Skale::PesoRaw )
 			{
 				if ( Skale::WeightReport[1] == kSkaleStable )
@@ -241,14 +241,13 @@ void Skale::runContThread()
 				{ TmpXor = TmpXor ^ Skale::WeightReport[i]; }
 			Skale::WeightReport[6] = TmpXor;
 		}   // Termino del scope libera SkaleMutex
-		// Logger::trace("runCont Thread unlocks SkaleMutex");
 
 	 // The caller may choose to consult getActiveConnectionCount in order to determine 
 	 // if there are any active connections before sending a change notification.
 	 // active connections = Notifications ???, Probablemente No
-	 	if ( 0 !=  HciAdapter::getInstance().getActiveConnectionCount() ) { 
+	 	// if ( 0 !=  HciAdapter::getInstance().getActiveConnectionCount() ) { 
 		ggkNofifyUpdatedCharacteristic("/com/decentscale/DecentScale/ReadNotify");
-	 	} 
+	 	// } 
 	}
 	Logger::trace("Leaving the Skale runCont Thread");
 }
@@ -284,7 +283,7 @@ bool Skale::stop()
 		// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 		std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
 		Logger::trace("Skale Stop locks Skale Mutex to Udate");
-		TerminaCont = true; // bandera para terminar ciclo
+		BanderaCiclo = false; // bandera para terminar ciclo
 		Logger::trace("Skale Stop realeses Skale Mutex");
 	}
 	Logger::trace("Skale waiting for thread termination");

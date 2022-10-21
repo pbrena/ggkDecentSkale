@@ -38,7 +38,7 @@ public:
 	// Used or sake of Thread-safety <<<---
 	static std::mutex SkaleMutex;
 
-	static bool    TerminaCont;  // bandera para terminar ciclo continuo
+	static bool    BanderaCiclo;  // bandera para terminar ciclo continuo
 	static int16_t PesoRaw;      // Grams * 10
 	static int16_t PesoRawAntes;
 	static int16_t PesoConTara;
