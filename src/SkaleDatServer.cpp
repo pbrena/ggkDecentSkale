@@ -153,8 +153,9 @@ void Skale::UtilTare()
 int16_t Skale::UtilLeePesoHW()
 {
  // NO --- Se llama cada decima de segundo Logger::trace("UtilLeePesoHW llamado");
- //Skale::PesoRaw =  rand() % 100 - 50; 
-	int16_t TmpLeePesoRaw =  0x0000;
+	// int16_t TmpLeePesoRaw =  0x0000;
+	 // Tempo: Numeros Aleatorios
+	int16_t TmpLeePesoRaw =  rand() % 100 - 50;
 	return  TmpLeePesoRaw;
 }
 
@@ -169,6 +170,8 @@ void runContThread()
 void Skale::runContThread()
 {
 	Logger::trace("Entering the Skale runCont Thread");
+ // Tempo: Numeros Aleatorios
+	srand(time(NULL));
 
 	int16_t TmpNuevoPesoRaw;   
  // 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
