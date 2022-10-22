@@ -11,86 +11,12 @@
 // >>>  INSIDE THIS FILE
 // >>
 //
-// This is an example single-file stand-alone application that runs a
-// Gobbledegook server.
+// This is a single-file stand-alone application that starts the Gobbledegook server, 
+// starts Skale Data Server and link them together thru DataSetter/Getter
 //
 // >>
-// >>>  DISCUSSION
+// >>>  DISCUSSION See StanaloneOrig.cpp
 // >>
-//
-// Very little is required ("MUST") by a stand-alone application to instantiate a valid Gobbledegook server. There are also some
-// things that are reocommended ("SHOULD").
-//
-// * A stand-alone application MUST:
-//
-//     * Start the server via a call to `ggkStart()`.
-//
-//         Once started the server will run on its own thread.
-//
-//         Two of the parameters to `ggkStart()` are delegates responsible for providing data accessors for the server, a
-//         `GGKServerDataGetter` delegate and a 'GGKServerDataSetter' delegate. The getter method simply receives a string name (for
-//         example, "battery/level") and returns a void pointer to that data (for example: `(void *)&batteryLevel`). The setter does
-//         the same only in reverse.
-//
-//         While the server is running, you will likely need to update the data being served. This is done by calling
-//         `ggkNofifyUpdatedCharacteristic()` or `ggkNofifyUpdatedDescriptor()` with the full path to the characteristic or delegate
-//         whose data has been updated. This will trigger your server's `onUpdatedValue()` method, which can perform whatever
-//         actions are needed such as sending out a change notification (or in BlueZ parlance, a "PropertiesChanged" signal.)
-//
-// * A stand-alone application SHOULD:
-//
-//     * Shutdown the server before termination
-//
-//         Triggering the server to begin shutting down is done via a call to `ggkTriggerShutdown()`. This is a non-blocking method
-//         that begins the asynchronous shutdown process.
-//
-//         Before your application terminates, it should wait for the server to be completely stopped. This is done via a call to
-//         `ggkWait()`. If the server has not yet reached the `EStopped` state when `ggkWait()` is called, it will block until the
-//         server has done so.
-//
-//         To avoid the blocking behavior of `ggkWait()`, ensure that the server has stopped before calling it. This can be done
-//         by ensuring `ggkGetServerRunState() == EStopped`. Even if the server has stopped, it is recommended to call `ggkWait()`
-//         to ensure the server has cleaned up all threads and other internals.
-//
-//         If you want to keep things simple, there is a method `ggkShutdownAndWait()` which will trigger the shutdown and then
-//         block until the server has stopped.
-//
-//     * Implement signal handling to provide a clean shut-down
-//
-//         This is done by calling `ggkTriggerShutdown()` from any signal received that can terminate your application. For an
-//         example of this, search for all occurrences of the string "signalHandler" in the code below.
-//
-//     * Register a custom logging mechanism with the server
-//
-//         This is done by calling each of the log registeration methods:
-//
-//             `ggkLogRegisterDebug()`
-//             `ggkLogRegisterInfo()`
-//             `ggkLogRegisterStatus()`
-//             `ggkLogRegisterWarn()`
-//             `ggkLogRegisterError()`
-//             `ggkLogRegisterFatal()`
-//             `ggkLogRegisterAlways()`
-//             `ggkLogRegisterTrace()`
-//
-//         Each registration method manages a different log level. For a full description of these levels, see the header comment
-//         in Logger.cpp.
-//
-//         The code below includes a simple logging mechanism that logs to stdout and filters logs based on a few command-line
-//         options to specify the level of verbosity.
-//
-// >>
-// >>>  Building with GOBBLEDEGOOK
-// >>
-//
-// The Gobbledegook distribution includes this file as part of the Gobbledegook files with everything compiling to a single, stand-
-// alone binary. It is built this way because Gobbledegook is not intended to be a generic library. You will need to make your
-// custom modifications to it. Don't worry, a lot of work went into Gobbledegook to make it almost trivial to customize
-// (see Server.cpp).
-//
-// If it is important to you or your build process that Gobbledegook exist as a library, you are welcome to do so. Just configure
-// your build process to build the Gobbledegook files (minus this file) as a library and link against that instead. All that is
-// required by applications linking to a Gobbledegook library is to include `include/Gobbledegook.h`.
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #include <signal.h>
@@ -113,8 +39,7 @@ static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 //
 
 static std::vector<guint8> DataServCharVectorBuffr = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
-// static std::string  DataTextString = "\x03\x0F\x04\x03\x02\x01\x0F"; // Falla con ceros
-// std::vector<uint8_t>   TmpResp ={'\x03', '\xCE', '\x00', '\x00', '\x00', '\x00', '\xCD'};
+static std::vector<guint8> KomndCharVectorBuffr    = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 //
 // Logging
@@ -171,8 +96,7 @@ void signalHandler(int signum)
 //
 // This method conforms to `GGKServerDataGetter` and is passed to the server via our call to `ggkStart()`.
 //
-// The server calls this method from its own thread, so we must ensure our implementation is thread-safe. In our case, we're simply
-// sending over stored values, so we don't need to take any additional steps to ensure thread-safety.
+// The server calls this method from its own thread, so we must ensure our implementation is thread-safe. 
 const void *dataGetter(const char *pName)
 {
 	if (nullptr == pName)
@@ -186,7 +110,7 @@ const void *dataGetter(const char *pName)
 	if ( strName == "ReadNotify" )
 	{
 		// Modifica buffer de datos con mensaje de respuesta de Skale
-		DataServCharVectorBuffr  = Skale::getInstance().SkaleResponce();
+		DataServCharVectorBuffr  = Skale::getInstance().CurrentPacket();
 		LogDebug("Data getter: current &DataServCharVectorBuffr replied"); 
 		return &DataServCharVectorBuffr;
 	}
@@ -225,9 +149,9 @@ int dataSetter(const char *pName, const void *pData)
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack")
 	{ 
 		// Aqui parace resolver el valor enviado (vector) por el write a partir del apuntador
-		DataServCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
+		KomndCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
 		 // Ojo llama al procesador de comandos que es boolano
-		if ( !Skale::getInstance().SkaleProcKmd(DataServCharVectorBuffr) )
+		if ( !Skale::getInstance().SkaleProcKmd(KomndCharVectorBuffr) )
 			{ 
 				LogError("Warning: SkaleProcKmd -> false, fallo"); 
 				return 0; 
@@ -272,7 +196,6 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 		}
 	}
 
-
 	// Setup our signal handlers
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
@@ -297,13 +220,13 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 	//     for more information.
 	//
 	// The so called (Gatt) Server  (different from Data Server)
-	if (!ggkStart("decentscale", "Decent Scale", "DecentScale", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
+	if (!ggkStart("decentscale", "Decent Scale", "Decent Scale", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
 	{
 		return -1;
 	}
-	 // Other Stuff can be executed while Wait for the servers shutdown process
-     
-	 // Start the (Skale) Data server Continous process in its own Thread
+	// Other Stuff can be executed while Wait for the servers shutdown process
+	
+	// Start the (Skale) Data server Continous process in its own Thread
 	if (!Skale::getInstance().start())
 	{
 		return -1;
