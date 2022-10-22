@@ -48,12 +48,12 @@ public:
 	static bool    LedOn;
 	static bool    GramsOn;
 	static bool    TimerOn;
-	static std::vector<guint8>   WeightReport; // 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
+	static std::vector<guint8>   MessagePacket; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
 	//
 	// Constans
 	//
 	// Wait time before new scale values update cycle
-	static const int16_t kRescanTimeMS = 97;
+	static const int16_t kRescanTimeMS = 100;
 
 	//
 	// Methods
@@ -78,7 +78,7 @@ public:
 	// This method will block until the SkaleCont thread joins
 	static bool stop();
 
-	static std::vector<guint8> SkaleResponce();
+	static std::vector<guint8> CurrentPacket();
 	static bool SkaleProcKmd(std::vector<guint8>   SkaleKmd);
 
 	// Our thread interface, which simply launches our the thread processor on our Skale instance
@@ -95,8 +95,8 @@ private:
 	// Our continous thread listens for events coming from the adapter and deals with them appropriately
 	static std::thread contThread;
 
-	static const int  peso  = 2;   // Posicion del Peso
-	static const int  difer = 4;   // Posicion de la diferencia
+	static const guint8  peso  = 2;   // Posicion del Peso
+	static const guint8  difer = 4;   // Posicion de la diferencia
 
 	static const guint8 kSkaleStable    = 0xCE; // weight stable
 	static const guint8 kSkaleChning    = 0xCA; // weight changing
@@ -107,9 +107,10 @@ private:
 	//
 	// Methods
 	//
-	static void    UtilInserta(int Cual, int16_t Valor, std::vector<guint8> Mensaje);
+
+	static void    UtilInserta(guint8 Cual, int16_t Valor, std::vector<guint8> Mensaje);
 	static void    UtilTare();
-	static int16_t UtilLeePesoHW();
+	static int16_t UtilCurrentPesoHW();
 
 };
 #endif

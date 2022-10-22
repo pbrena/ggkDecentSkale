@@ -1,19 +1,19 @@
 //
 // Use of this source code is governed by a BSD-style license that can be found
 // in the LICENSE file in the root of the source tree.
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // >>
 // >>>  INSIDE THIS FILE
 // >>
 //
 // This is the Scale Controler
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // >>
 // >>>  DISCUSSION
 // >>
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // #include <string.h>
 #include <chrono>
 #include <future>
@@ -31,46 +31,36 @@
 using ggk::Logger;
 
 std::mutex Skale::SkaleMutex; // explicit intiialization might be needed
-// Variable initial values
-bool    Skale::BanderaCiclo    = true;       // bandera para mantener ciclo continuo
-int16_t Skale::PesoRaw        = 0x0000;      // Grams * 10
-int16_t Skale::PesoRawAntes   = 0x0000;
-int16_t Skale::PesoConTara    = 0x0000;
-int16_t Skale::OffsetPaTara   = 0x0000;
-int16_t Skale::DiferenciaPeso = 0x0000;
-bool    Skale::LedOn          = false;
-bool    Skale::GramsOn        = true;
-bool    Skale::TimerOn        = false;
-//  03=DecentMark CE=weightstable x0000=weight x0000=Change =XorValidation
-std::vector<guint8> Skale::WeightReport = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
+// Variable Declarations
+bool    Skale::BanderaCiclo;  // bandera para mantener ciclo continuo
+int16_t Skale::PesoRaw;       // Grams * 10
+int16_t Skale::PesoRawAntes;
+int16_t Skale::PesoConTara;
+int16_t Skale::OffsetPaTara;
+int16_t Skale::DiferenciaPeso;
+bool    Skale::LedOn;
+bool    Skale::GramsOn;
+bool    Skale::TimerOn;
+// 0-1o          1-2o            2-Peso       4-Dif         6-xor  
+// INICIAL:
+// 03=DecentMark CE=weightstable x0000=weight x0000=Change cd=XorValidation
+std::vector<guint8> Skale::MessagePacket; 
 
 // Our Continous thread Updates Skale (Data Server) information
 std::thread Skale::contThread;
 
 // Ojo puede ser llamado hasta cada 1/10 de seg
-std::vector<guint8> Skale::SkaleResponce()
+std::vector<guint8> Skale::CurrentPacket()
 {
-		// Auto-start thead??
-	if (!Skale::contThread.joinable() && !Skale::start())
-	{
-		Logger::error("Skale failed to start");
-		return {}; // Null vector
-	}
+
 	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-	std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
-	// Read informacion
-	std::vector<guint8> TmpReport = Skale::WeightReport; 
-	return TmpReport; 
+	std::lock_guard<std::mutex> lk(SkaleMutex); 
+	// el MessagePacket se actualiza continuamente
+	return MessagePacket; 
 }
 
 bool Skale::SkaleProcKmd(std::vector<guint8> SkaleKmd)
 {
- // Auto-start thead??
-	if (!contThread.joinable() && !Skale::start())
-	{
-		Logger::error("Skale ProcKmd Coudnt find cont Thread");
-		return false;
-	}
  // Verify Parity
 	char TmpXor = SkaleKmd[0] ;          
 	for(int i=1; i<=5; i++)            // Calcula xor
@@ -80,46 +70,44 @@ bool Skale::SkaleProcKmd(std::vector<guint8> SkaleKmd)
 		Logger::trace("Skale ProcKmd: Kmd Wrong Parity");
 		return false;                 // command corrupted --> Abort
 	}                
- 
-	 // Otherwise... process
+	// Otherwise... process
  	guint8 leeKmd = SkaleKmd[1];
 	switch( leeKmd ) {
 		case kSkaleTareKmd:     //UtilTare
 			Skale::getInstance().UtilTare();	 // Es Thread Safe
-		break;  
+		return true;
 		case kSkaleLEDnGrKmd :  //LED & Grams
 		 // Null Action for now
 		 // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 			if (true) { // Scope only
 				Logger::trace("SkaleProcKmd locks Skale Mutex to update LED & Gram");
-				std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
-				Skale::LedOn   = true;
-				Skale::GramsOn = true;
+				std::lock_guard<std::mutex> lk(SkaleMutex); 
+				LedOn   = true;
+				GramsOn = true;
 				Logger::trace("SkaleProcKmd releases Skale Mutex LED & Gram");
 			}
-		break;  
+		return true;
 		case kSkaleTimerKmd :   //Timer 
 		 // Null Action for now
 		 // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 			if (true) { // Scope only
 				Logger::trace("SkaleProcKmd locks Skale Mutex to update Timer");
-				std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
-				Skale::TimerOn = true;
+				std::lock_guard<std::mutex> lk(SkaleMutex); 
+				TimerOn = true;
 				Logger::trace("SkaleProcKmd releses Skale Mutex to update Timer");
 			}
-		break;
+		return true;
 		default : // command corrupted --> Abort 
 			Logger::trace("SkaleProcKmd: Kmd Wrong kmd");
-			return false;
+		return false;
 	}
 	return true;
 }
 
-// pudieran ser private ?
-void Skale::UtilInserta(int Cual, int16_t Valor, std::vector<guint8> Mensaje)
+void Skale::UtilInserta(guint8 Cual, int16_t Valor, std::vector<guint8> Mensaje)
 {
-	char primer = static_cast<char> ((Valor & 0xFF00U) >> 8U);
-	char segund = static_cast<char>  (Valor & 0x00FFU);
+	guint8 primer = static_cast<guint8> ((Valor & 0xFF00) >> 8);
+	guint8 segund = static_cast<guint8>  (Valor & 0x00FF);
 
 	Mensaje[Cual]   = primer;
 	Mensaje[Cual++] = segund;
@@ -128,34 +116,37 @@ void Skale::UtilInserta(int Cual, int16_t Valor, std::vector<guint8> Mensaje)
 void Skale::UtilTare()
 {
  // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-	std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
+	std::lock_guard<std::mutex> lk(SkaleMutex); 
 	Logger::trace("Skale Util Tare locks Skale Mutex to Udate");
-	// Actualiza informacion de Tara
-	// 	Skale::PesoRaw	       = ????                 Peso actual se asume actualizado
-	Skale::PesoConTara	  = 0x0000;           // Se reportara Cero
-	Skale::OffsetPaTara   = Skale::PesoRaw;          // PesoCrudo actual es la nueva base (offset)
-	Skale::DiferenciaPeso = 0x0000;
+ // Actualiza informacion de Tara
+ // PesoRaw	      = ????                 Peso actual se asume actualizado
+	PesoConTara	  = 0x0000;           // Se reportara Cero
+	OffsetPaTara   = PesoRaw;   // PesoCrudo actual es la nueva base (offset)
+	DiferenciaPeso = 0x0000;
  // Se asume estabilidad x un momento
-	Skale::WeightReport[1] = kSkaleStable;    // 2o byte = Parm Estabilidad
- //	WeightReport[2] = PesoConTara;     // 3o y 4o. bytes Peso 
-	Skale::UtilInserta(peso,  Skale::PesoConTara,    Skale::WeightReport);
- //	WeightReport[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
-	Skale::UtilInserta(difer, Skale::DiferenciaPeso, Skale::WeightReport);	           
+	MessagePacket[1] = kSkaleStable;    // 2o byte = Parm Estabilidad
+ //	MessagePacket[2] = PesoConTara;     // 3o y 4o. bytes Peso 
+	Skale::UtilInserta(peso,  PesoConTara,    MessagePacket);
+ //	MessagePacket[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
+	Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	           
  // Calcular y actualizar nueva paridad
-	guint8 TmpXor = Skale::WeightReport[0];        
+	guint8 TmpXor = MessagePacket[0];        
 	for(int i=1; i<=5; i++)  // Calcula xor
-		{ TmpXor = TmpXor ^ Skale::WeightReport[i]; }
-	Skale::WeightReport[6] = TmpXor;
+		{ TmpXor = TmpXor ^ MessagePacket[i]; }
+	MessagePacket[6] = TmpXor;
  // Ojo: El termino del scope y destruccion del objeto, libera Skale Mutex
 	Logger::trace("Util Tare Unlock Skale Mutex");
 }
 
-int16_t Skale::UtilLeePesoHW()
+int16_t Skale::UtilCurrentPesoHW()
 {
- // NO --- Se llama cada decima de segundo Logger::trace("UtilLeePesoHW llamado");
+ // NO --- Se llama cada decima de segundo Logger::trace("UtilCurrentPesoHW llamado");
 	// int16_t TmpLeePesoRaw =  0x0000;
 	 // Tempo: Numeros Aleatorios
-	int16_t TmpLeePesoRaw =  rand() % 100 - 50;
+	int16_t TmpLeePesoRaw =  ( rand() % 2000 ) + 1;
+	if ( 0 == TmpLeePesoRaw ) {
+		Logger::error("DDDDDAAAA  CCCERO");
+	}
 	return  TmpLeePesoRaw;
 }
 
@@ -170,73 +161,87 @@ void runContThread()
 void Skale::runContThread()
 {
 	Logger::trace("Entering the Skale runCont Thread");
- // Tempo: Numeros Aleatorios
+
+ // Tempo: Iniciar Numeros Aleatorios
 	srand(time(NULL));
 
-	int16_t TmpNuevoPesoRaw;   
- // 03=Decent Type CE=weightstable 0000=weight 0000=Change =XorValidation
- //	"\x03\xCE\x00\x00\x00\x00\xCD"; 
- //  0-1o 1-2o 2-Peso 4-Dif   6-xor    
+ // Variable initial values
+	BanderaCiclo   = true;         // bandera para mantener ciclo continuo
+	PesoRaw        = 0x0000;      // Grams * 10
+	PesoRawAntes   = 0x0000;
+	PesoConTara    = 0x0000;
+	OffsetPaTara   = 0x0000;
+	DiferenciaPeso = 0x0000;
+	LedOn          = false;
+	GramsOn        = true;
+	TimerOn        = false;
+	//               0-1o 1-2o 2-Peso    4-Dif     6-xor    
+	MessagePacket = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
 
-	bool BanderaLocal = true; // Continua ciclo? Inicialmente SI
-	while (BanderaLocal) // Semi Continuo  OJO <---- No todas las actualizaciones se envian al Cliente
+ // Local Vars
+	int16_t TmpNuevoPesoRaw = 0x0000;   
+	bool TmpBanderaLoc = true; // Continua ciclo? Inicialmente SI
+
+	while (TmpBanderaLoc) // Semi Continuo  OJO <---- No todas las actualizaciones se envian al Cliente
 	{
-	 // Pace the cicles to avoid waist CPU
+	 // Pace the cicles  
 		std::this_thread::sleep_for(std::chrono::milliseconds(kRescanTimeMS));
-	 // Para no consumir tiempo se lee en Var temporal
-		TmpNuevoPesoRaw = Skale::UtilLeePesoHW(); 
+
+	 // Para no consumir alargar el bloqueo se lee en Var temporal
+		TmpNuevoPesoRaw = Skale::UtilCurrentPesoHW(); 
 
 		if ( true )    // Solo para limitar scope
 		{
-			std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
+			std::lock_guard<std::mutex> lk(SkaleMutex); 
 
-		 	BanderaLocal = BanderaCiclo; // Actualiza desde Bandera Global, Modificado por .stop()
-		 // Ojo: No asumir que si ahora el peso no cambio, antes no ha cambiado, pudo haber sido inestable
-
-			if ( TmpNuevoPesoRaw == Skale::PesoRaw ) 
-			{
-			 // Ahora NO Cambio PesoRaw, antes era estable?
-				if ( Skale::WeightReport[1] != kSkaleStable )
-				 {   
-				 // Ahora NO Cambio PesoRaw, pero antes NO era estable ==> Solo cambio estabilidad 
-				 // y la Diferencia ahora es cero
-					Skale::WeightReport[1] = kSkaleStable;           // 2o byte = Parm Estable
-
-					Skale::DiferenciaPeso  = 0x0000;                 // Antes no cero
-					Skale::UtilInserta(difer, Skale::DiferenciaPeso, WeightReport);	
-				 // Calcular y actualizar nueva paridad
-					guint8 TmpXor = Skale::WeightReport[0];        
-					for(int i=1; i<=5; i++)  // Calcula xor
-						{ TmpXor = TmpXor ^ Skale::WeightReport[i]; }
-					Skale::WeightReport[6] = TmpXor;
-				 }
-				 // else {   }
-				 // Ahora NO Cambio PesoRaw y adeamas YA era estable, entonces nada cambio ,
-				 // TAMPOCO el reporte que  sera enviado
-
-			}
-			else
-		 // Ahora, si ES inestable...
+		 	TmpBanderaLoc = BanderaCiclo; // Actualiza desde Bandera Global, Modificado por .stop()
+ 			if ( TmpNuevoPesoRaw != PesoRaw ) 
+		 // Ahora, No ES estable...
 			{
 			 // Se necesita actualizar TODO, peso Y diferencia
-				Skale::WeightReport[1] = kSkaleChning;    // cambio? no importa, es mas rapido no preguntar
+			 // Tambien se asume que antes podia o no ser estable y se simplifican 2 casos
+				MessagePacket[1] = kSkaleChning;    // cambio? no importa, es mas rapido no preguntar
 				
-				Skale::PesoConTara     = TmpNuevoPesoRaw - Skale::OffsetPaTara;
-				Skale::UtilInserta(peso, Skale::PesoConTara, Skale::WeightReport);   
+				PesoConTara     = TmpNuevoPesoRaw - OffsetPaTara;
+				Skale::UtilInserta(peso, PesoConTara, MessagePacket);   
 
-				Skale::DiferenciaPeso  = TmpNuevoPesoRaw - Skale::PesoRaw; // se actualiza WeightReport mas abajo
-				Skale::UtilInserta(difer, Skale::DiferenciaPeso, WeightReport);	
+				DiferenciaPeso  = TmpNuevoPesoRaw - PesoRaw; // se actualiza MessagePacket mas abajo
+				Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	
 			 // Calcular y actualizar nueva paridad
-				guint8 TmpXor = Skale::WeightReport[0];        
+				guint8 TmpXor = MessagePacket[0];        
 				for(int i=1; i<=5; i++)  // Calcula xor
-					{ TmpXor = TmpXor ^ Skale::WeightReport[i]; }
-				Skale::WeightReport[6] = TmpXor;
+					{ TmpXor = TmpXor ^ MessagePacket[i]; }
+				MessagePacket[6] = TmpXor;
 			 // Recordar estado actual
-				Skale::PesoRaw 		   = TmpNuevoPesoRaw; 
+				PesoRaw 		= TmpNuevoPesoRaw; 
 			}
+			else // TmpNuevoPesoRaw es igual a PesoRaw
+			{
+			 // Ahora, ES estable pero... antes lo era?  se separan 2 casos
+				if ( MessagePacket[1] != kSkaleStable )
+				{   
+				 // Ahora Es Estable, pero antes NO lo era ==> Es la primera vez que
+				 // cambio estabilidad y Diferencia (ahora cero) pero no Peso a reportar
+					MessagePacket[1] = kSkaleStable;          // 2o byte = Parm Estable
+
+					DiferenciaPeso  = 0x0000;                 // Antes no cero
+					Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	
+				 // Calcular y actualizar nueva paridad
+					guint8 TmpXor = MessagePacket[0];        
+					for(int i=1; i<=5; i++)  // Calcula xor
+						{ TmpXor = TmpXor ^ MessagePacket[i]; }
+					MessagePacket[6] = TmpXor;
+				}
+				// else {   }
+				// Finalmente Es Estable y ademas YA lo era, entonces nada cambio ,
+				// TAMPOCO el reporte que  sera enviado
+			}
+			   
 		}   // Termino del scope libera SkaleMutex
-		// Notify --- Cada PERIODO haya o no cmabios
-		ggkNofifyUpdatedCharacteristic("/com/decentscale/DecentScale/ReadNotify");
+		// Notify --- Cada PERIODO haya o no cambios la Caracteristica se encargara de pedir
+		// El Mensaje nosotros solo notificamos el paso del tiempo
+		if (0 == ggkNofifyUpdatedCharacteristic("/com/decentscale/decentscale/ReadNotify"))
+			{ Logger::error("runCont Thread: Fallo Notify"); }
 	}
 	Logger::trace("Leaving the Skale runCont Thread");
 }
@@ -270,7 +275,7 @@ bool Skale::stop()
 {
 	if (true) {  // just to limit scope
 		// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-		std::lock_guard<std::mutex> lk(Skale::SkaleMutex); 
+		std::lock_guard<std::mutex> lk(SkaleMutex); 
 		Logger::trace("Skale Stop locks Skale Mutex to Udate");
 		BanderaCiclo = false; // bandera para terminar ciclo
 		Logger::trace("Skale Stop realeses Skale Mutex");
@@ -293,7 +298,7 @@ bool Skale::stop()
 	{
 		if (ex.code() == std::errc::invalid_argument)
 		{
-			Logger::warn(SSTR << "Skale ContThread thread was not joinable (invalid Arg) during Skale::stop(): " << ex.what());
+			Logger::warn(SSTR << "Skale ContThread thread was not joinable (invalid Arg) during stop(): " << ex.what());
 		}
 		else if (ex.code() == std::errc::no_such_process)
 		{
@@ -301,11 +306,11 @@ bool Skale::stop()
 		}
 		else if (ex.code() == std::errc::resource_deadlock_would_occur)
 		{
-			Logger::warn(SSTR << "Deadlock avoided in call to Skale::stop() (did the event thread try to stop itself?): " << ex.what());
+			Logger::warn(SSTR << "Deadlock avoided in call to stop() (did the event thread try to stop itself?): " << ex.what());
 		}
 		else
 		{
-			Logger::warn(SSTR << "Unknown system_error code (" << ex.code() << ") during Skale::stop(): " << ex.what());
+			Logger::warn(SSTR << "Unknown system_error code (" << ex.code() << ") during stop(): " << ex.what());
 		}
 		return false;
 	}
