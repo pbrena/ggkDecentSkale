@@ -9,7 +9,6 @@
 //
 // This is the Scale Controler
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
 // >>
 // >>>  DISCUSSION
 // >>
@@ -34,7 +33,6 @@ std::mutex Skale::SkaleMutex; // explicit intiialization might be needed
 // Variable Declarations
 bool    Skale::BanderaCiclo;  // bandera para mantener ciclo continuo
 int16_t Skale::PesoRaw;       // Grams * 10
-int16_t Skale::PesoRawAntes;
 int16_t Skale::PesoConTara;
 int16_t Skale::OffsetPaTara;
 int16_t Skale::DiferenciaPeso;
@@ -52,14 +50,13 @@ std::thread Skale::contThread;
 // Ojo puede ser llamado hasta cada 1/10 de seg
 std::vector<guint8> Skale::CurrentPacket()
 {
-
 	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 	std::lock_guard<std::mutex> lk(SkaleMutex); 
 	// el MessagePacket se actualiza continuamente
 	return MessagePacket; 
 }
 
-bool Skale::SkaleProcKmd(std::vector<guint8> SkaleKmd)
+bool Skale::SkaleProcKmd(const std::vector<guint8> &SkaleKmd)
 {
  // Verify Parity
 	char TmpXor = SkaleKmd[0] ;          
@@ -103,14 +100,37 @@ bool Skale::SkaleProcKmd(std::vector<guint8> SkaleKmd)
 	}
 	return true;
 }
-
-void Skale::UtilInserta(guint8 Cual, int16_t Valor, std::vector<guint8> Mensaje)
+// OOOOJo: There are two ways to pass a vector to a function:
+// 				Pass By value
+// 				Pass By Reference
+// When passed by value, a copy of the vector is created. This new copy of the vector
+// is then used in the function and thus, any changes made to the vector in the function 
+// do not affect the original vector.
+// So to modify -- by Reference: use & example:  vector<int>& vect
+void Skale::UtilInserta(int16_t Cual, int16_t Valor, std::vector<guint8>& Mensaje)
 {
-	guint8 primer = static_cast<guint8> ((Valor & 0xFF00) >> 8);
-	guint8 segund = static_cast<guint8>  (Valor & 0x00FF);
+	int16_t primer = Valor;
+ // "and" using this mask to clear out the lower 8 bits
+			primer = 0xFF00 & primer;    
+			primer = primer >> 8;
+	Mensaje[Cual]  = static_cast<guint8> (primer);
+ // "and" using this mask to clear out the lower 8 bits
+	int16_t  segund = Valor;
+    		 segund = 0x00FF & segund;
+	Mensaje[Cual+1] = static_cast<guint8> (segund);
+	
+	/*
+	union ByteSplit
+	{
+		int16_t Entero;
+		guint8  Partido[2];
+	};
 
-	Mensaje[Cual]   = primer;
-	Mensaje[Cual++] = segund;
+	ByteSplit Splited;
+	Splited.Entero  = Valor;
+	Mensaje[Cual]   = Splited.Partido[0];    // high bits
+	Mensaje[Cual++] = Splited.Partido[1];    // low  bits
+	*/
 }
 
 void Skale::UtilTare()
@@ -141,12 +161,13 @@ void Skale::UtilTare()
 int16_t Skale::UtilCurrentPesoHW()
 {
  // NO --- Se llama cada decima de segundo Logger::trace("UtilCurrentPesoHW llamado");
-	// int16_t TmpLeePesoRaw =  0x0000;
 	 // Tempo: Numeros Aleatorios
-	int16_t TmpLeePesoRaw =  ( rand() % 2000 ) + 1;
-	if ( 0 == TmpLeePesoRaw ) {
-		Logger::error("DDDDDAAAA  CCCERO");
-	}
+	// int16_t TmpLeePesoRaw =  rand() % 0xFFFF;
+	// if ( 0 == TmpLeePesoRaw ) {
+	// 	Logger::error("DDDDDAAAA  CCCERO");
+	// }
+
+	int16_t TmpLeePesoRaw =  0xabcd;
 	return  TmpLeePesoRaw;
 }
 
@@ -166,9 +187,8 @@ void Skale::runContThread()
 	srand(time(NULL));
 
  // Variable initial values
-	BanderaCiclo   = true;         // bandera para mantener ciclo continuo
+	BanderaCiclo   = true;        // bandera para mantener ciclo continuo
 	PesoRaw        = 0x0000;      // Grams * 10
-	PesoRawAntes   = 0x0000;
 	PesoConTara    = 0x0000;
 	OffsetPaTara   = 0x0000;
 	DiferenciaPeso = 0x0000;
@@ -179,15 +199,16 @@ void Skale::runContThread()
 	MessagePacket = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
 
  // Local Vars
-	int16_t TmpNuevoPesoRaw = 0x0000;   
-	bool TmpBanderaLoc = true; // Continua ciclo? Inicialmente SI
+	int16_t TmpNuevoPesoRaw;   
+	guint8  TmpXor;
+	bool    TmpBanderaLoc   = true;    // Continua ciclo? Inicialmente SI
 
 	while (TmpBanderaLoc) // Semi Continuo  OJO <---- No todas las actualizaciones se envian al Cliente
 	{
 	 // Pace the cicles  
 		std::this_thread::sleep_for(std::chrono::milliseconds(kRescanTimeMS));
 
-	 // Para no consumir alargar el bloqueo se lee en Var temporal
+	 // Para no alargar el bloqueo se lee en Var temporal
 		TmpNuevoPesoRaw = Skale::UtilCurrentPesoHW(); 
 
 		if ( true )    // Solo para limitar scope
@@ -195,47 +216,42 @@ void Skale::runContThread()
 			std::lock_guard<std::mutex> lk(SkaleMutex); 
 
 		 	TmpBanderaLoc = BanderaCiclo; // Actualiza desde Bandera Global, Modificado por .stop()
- 			if ( TmpNuevoPesoRaw != PesoRaw ) 
-		 // Ahora, No ES estable...
+ 			
+			if ( TmpNuevoPesoRaw == PesoRaw ) 
 			{
-			 // Se necesita actualizar TODO, peso Y diferencia
-			 // Tambien se asume que antes podia o no ser estable y se simplifican 2 casos
-				MessagePacket[1] = kSkaleChning;    // cambio? no importa, es mas rapido no preguntar
-				
-				PesoConTara     = TmpNuevoPesoRaw - OffsetPaTara;
-				Skale::UtilInserta(peso, PesoConTara, MessagePacket);   
-
-				DiferenciaPeso  = TmpNuevoPesoRaw - PesoRaw; // se actualiza MessagePacket mas abajo
-				Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	
-			 // Calcular y actualizar nueva paridad
-				guint8 TmpXor = MessagePacket[0];        
-				for(int i=1; i<=5; i++)  // Calcula xor
-					{ TmpXor = TmpXor ^ MessagePacket[i]; }
-				MessagePacket[6] = TmpXor;
-			 // Recordar estado actual
-				PesoRaw 		= TmpNuevoPesoRaw; 
+			 // Ee estable...
+				MessagePacket[1] = kSkaleStable;      
 			}
-			else // TmpNuevoPesoRaw es igual a PesoRaw
+			else 
 			{
-			 // Ahora, ES estable pero... antes lo era?  se separan 2 casos
-				if ( MessagePacket[1] != kSkaleStable )
-				{   
-				 // Ahora Es Estable, pero antes NO lo era ==> Es la primera vez que
-				 // cambio estabilidad y Diferencia (ahora cero) pero no Peso a reportar
-					MessagePacket[1] = kSkaleStable;          // 2o byte = Parm Estable
-
-					DiferenciaPeso  = 0x0000;                 // Antes no cero
-					Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	
-				 // Calcular y actualizar nueva paridad
-					guint8 TmpXor = MessagePacket[0];        
-					for(int i=1; i<=5; i++)  // Calcula xor
-						{ TmpXor = TmpXor ^ MessagePacket[i]; }
-					MessagePacket[6] = TmpXor;
-				}
-				// else {   }
-				// Finalmente Es Estable y ademas YA lo era, entonces nada cambio ,
-				// TAMPOCO el reporte que  sera enviado
+			 // Es inestable
+				MessagePacket[1] = kSkaleChning;   
 			}
+
+			// PesoConTara     = TmpNuevoPesoRaw - OffsetPaTara;
+			// Skale::UtilInserta(peso,  PesoConTara,    MessagePacket);   
+
+			uint16_t primer = 0xabcd;
+		 // "and" using this mask to clear out the lower 8 bits
+			primer = 0xFF00 & primer;    
+			primer = primer >> 8;
+			MessagePacket[2]  = static_cast<guint8> (primer);
+		 // "and" using this mask to clear out the lower 8 bits
+			int16_t  segund = 0xabcd;
+			segund = 0x00FF & segund;
+			MessagePacket[3] = static_cast<guint8> (segund);
+			
+			// DiferenciaPeso  = TmpNuevoPesoRaw - PesoRaw; 
+
+			DiferenciaPeso  = 0xabcd; 
+			Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	
+			// Recordar estado actual
+			PesoRaw 		= TmpNuevoPesoRaw; 
+
+			TmpXor = MessagePacket[0];        
+			for(int i=1; i<=5; i++)  // Calcula xor
+				{ TmpXor = TmpXor ^ MessagePacket[i]; }
+			MessagePacket[6] = TmpXor;
 			   
 		}   // Termino del scope libera SkaleMutex
 		// Notify --- Cada PERIODO haya o no cambios la Caracteristica se encargara de pedir

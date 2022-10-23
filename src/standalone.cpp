@@ -15,7 +15,7 @@
 // starts Skale Data Server and link them together thru DataSetter/Getter
 //
 // >>
-// >>>  DISCUSSION See StanaloneOrig.cpp
+// >>>  DISCUSSION See standaloneOrig.cpp
 // >>
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -38,8 +38,8 @@ static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
 // Server data Buffer (Getter/Setter Use) Antes: Server data values
 //
 
-static std::vector<guint8> DataServCharVectorBuffr = {0x03, 0xCE, 0x00, 0x00, 0x00, 0x00, 0xCD};
-static std::vector<guint8> KomndCharVectorBuffr    = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+std::vector<guint8> DataServCharVectorBuffr;
+std::vector<guint8> KomndCharVectorBuffr;
 
 //
 // Logging
@@ -109,9 +109,13 @@ const void *dataGetter(const char *pName)
 
 	if ( strName == "ReadNotify" )
 	{
-		// Modifica buffer de datos con mensaje de respuesta de Skale
-		DataServCharVectorBuffr  = Skale::getInstance().CurrentPacket();
-		LogDebug("Data getter: current &DataServCharVectorBuffr replied"); 
+	 // Erases all previous Buffer contens
+		DataServCharVectorBuffr.clear();
+	 // Copia el contenido de la respuesta de Skale al buffer de datos
+	 // unico llamado a CurrentPacket es thread safe
+		DataServCharVectorBuffr =  Skale::getInstance().CurrentPacket();
+		// copy(TempV.begin(), TempV.end(), back_inserter(DataServCharVectorBuffr));
+		LogDebug("Data getter: The pointer &DataServCharVectorBuffr replied"); 
 		return &DataServCharVectorBuffr;
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
@@ -148,6 +152,8 @@ int dataSetter(const char *pName, const void *pData)
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack")
 	{ 
+		// Erases all previous Buffer contens
+		KomndCharVectorBuffr.clear();
 		// Aqui parace resolver el valor enviado (vector) por el write a partir del apuntador
 		KomndCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
 		 // Ojo llama al procesador de comandos que es boolano

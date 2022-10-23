@@ -40,7 +40,6 @@ public:
 
 	static bool    BanderaCiclo;  // bandera para terminar ciclo continuo
 	static int16_t PesoRaw;      // Grams * 10
-	static int16_t PesoRawAntes;
 	static int16_t PesoConTara;
 	static int16_t OffsetPaTara;
 	static int16_t DiferenciaPeso;
@@ -48,7 +47,7 @@ public:
 	static bool    LedOn;
 	static bool    GramsOn;
 	static bool    TimerOn;
-	static std::vector<guint8>   MessagePacket; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
+	static std::vector<guint8> MessagePacket; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
 	//
 	// Constans
 	//
@@ -79,7 +78,7 @@ public:
 	static bool stop();
 
 	static std::vector<guint8> CurrentPacket();
-	static bool SkaleProcKmd(std::vector<guint8>   SkaleKmd);
+	static bool SkaleProcKmd(const std::vector<guint8> &SkaleKmd);
 
 	// Our thread interface, which simply launches our the thread processor on our Skale instance
 	// This mehtod should not be called directly. Rather, it is started with start/stop methods
@@ -107,8 +106,7 @@ private:
 	//
 	// Methods
 	//
-
-	static void    UtilInserta(guint8 Cual, int16_t Valor, std::vector<guint8> Mensaje);
+	static void    UtilInserta(int16_t Cual, int16_t Valor, std::vector<guint8>& Mensaje);
 	static void    UtilTare();
 	static int16_t UtilCurrentPesoHW();
 
