@@ -13,11 +13,10 @@
 // >>>  DISCUSSION
 // >>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// #include <string.h>
 #include <chrono>
 #include <future>
 
-// To use Logger & HciAdapter Count from namespace ggk 
+// To use Logger from namespace ggk 
 #include "Logger.h"
 
 #include <thread>
@@ -26,7 +25,7 @@
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"
 
-// Logger & HciAdapter Count from namespace ggk 
+// Logger from namespace ggk 
 using ggk::Logger;
 
 std::mutex Skale::SkaleMutex; // explicit intiialization might be needed
@@ -42,24 +41,39 @@ bool    Skale::TimerOn;
 // 0-1o          1-2o            2-Peso       4-Dif         6-xor  
 // INICIAL:
 // 03=DecentMark CE=weightstable x0000=weight x0000=Change cd=XorValidation
-std::vector<guint8> Skale::MessagePacket; 
+std::vector<guint8> Skale::MessagePckt; 
+
+// Variables Temporales
+std::vector<guint8> TmpPckt; 
+guint8 TmpXor; // Ojo hay otra en el Scope de Cont
 
 // Our Continous thread Updates Skale (Data Server) information
 std::thread Skale::contThread;
 
-// Ojo puede ser llamado hasta cada 1/10 de seg
-std::vector<guint8> Skale::CurrentPacket()
+// Ojo: puede ser llamado hasta cada 1/10 de seg. This method uses the RETURN by reference 
+// notation. BEWARE not return the reference of a local variable declared in the function 
+// itself because it leads to a dangling reference.
+std::vector<guint8> &Skale::CurrentPacket()
 {
+	TmpPckt.clear();
 	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 	std::lock_guard<std::mutex> lk(SkaleMutex); 
-	// el MessagePacket se actualiza continuamente
-	return MessagePacket; 
+	// el MessagePckt se actualiza continuamente, se copia a Mensaje Temporal
+	// de forma "Thread Safe"
+	TmpPckt = MessagePckt; 
+ // NOT alocal variable 
+	return TmpPckt; 
 }
 
-bool Skale::SkaleProcKmd(const std::vector<guint8> &SkaleKmd)
+// Ojo: en este ejemplo como que se pasa apuntador tambien (pero de otra forma diferente a
+// "by Reference"
+// bool Skale::SkaleProcKmd(const std::vector<guint8> &SkaleKmd)
+
+// Optaremos por: by Reference: use & example:  vector<int>& Parm
+bool Skale::SkaleProcKmd( std::vector<guint8>& SkaleKmd )
 {
  // Verify Parity
-	char TmpXor = SkaleKmd[0] ;          
+	TmpXor = SkaleKmd[0] ;          
 	for(int i=1; i<=5; i++)            // Calcula xor
 		{ TmpXor = TmpXor ^ SkaleKmd[i]; }
 	if  ( SkaleKmd[6] != TmpXor )     // command corrupted
@@ -106,7 +120,7 @@ bool Skale::SkaleProcKmd(const std::vector<guint8> &SkaleKmd)
 // When passed by value, a copy of the vector is created. This new copy of the vector
 // is then used in the function and thus, any changes made to the vector in the function 
 // do not affect the original vector.
-// So to modify -- by Reference: use & example:  vector<int>& vect
+// So to modify -- by Reference: use & example:  vector<int>& Parm
 void Skale::UtilInserta(int16_t Cual, int16_t Valor, std::vector<guint8>& Mensaje)
 {
 	int16_t primer = Valor;
@@ -144,16 +158,16 @@ void Skale::UtilTare()
 	OffsetPaTara   = PesoRaw;   // PesoCrudo actual es la nueva base (offset)
 	DiferenciaPeso = 0x0000;
  // Se asume estabilidad x un momento
-	MessagePacket[1] = kSkaleStable;    // 2o byte = Parm Estabilidad
- //	MessagePacket[2] = PesoConTara;     // 3o y 4o. bytes Peso 
-	Skale::UtilInserta(peso,  PesoConTara,    MessagePacket);
- //	MessagePacket[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
-	Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	           
+	MessagePckt[1] = kSkaleStable;    // 2o byte = Parm Estabilidad
+ //	MessagePckt[2] = PesoConTara;     // 3o y 4o. bytes Peso 
+	Skale::UtilInserta(peso,  PesoConTara,    MessagePckt);
+ //	MessagePckt[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
+	Skale::UtilInserta(difer, DiferenciaPeso, MessagePckt);	           
  // Calcular y actualizar nueva paridad
-	guint8 TmpXor = MessagePacket[0];        
+	TmpXor = MessagePckt[0];        
 	for(int i=1; i<=5; i++)  // Calcula xor
-		{ TmpXor = TmpXor ^ MessagePacket[i]; }
-	MessagePacket[6] = TmpXor;
+		{ TmpXor = TmpXor ^ MessagePckt[i]; }
+	MessagePckt[6] = TmpXor;
  // Ojo: El termino del scope y destruccion del objeto, libera Skale Mutex
 	Logger::trace("Util Tare Unlock Skale Mutex");
 }
@@ -196,7 +210,7 @@ void Skale::runContThread()
 	GramsOn        = true;
 	TimerOn        = false;
 	//               0-1o 1-2o 2-Peso    4-Dif     6-xor    
-	MessagePacket = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
+	MessagePckt = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
 
  // Local Vars
 	int16_t TmpNuevoPesoRaw;   
@@ -220,38 +234,38 @@ void Skale::runContThread()
 			if ( TmpNuevoPesoRaw == PesoRaw ) 
 			{
 			 // Ee estable...
-				MessagePacket[1] = kSkaleStable;      
+				MessagePckt[1] = kSkaleStable;      
 			}
 			else 
 			{
 			 // Es inestable
-				MessagePacket[1] = kSkaleChning;   
+				MessagePckt[1] = kSkaleChning;   
 			}
 
 			// PesoConTara     = TmpNuevoPesoRaw - OffsetPaTara;
-			// Skale::UtilInserta(peso,  PesoConTara,    MessagePacket);   
+			// Skale::UtilInserta(peso,  PesoConTara,    MessagePckt);   
 
 			uint16_t primer = 0xabcd;
 		 // "and" using this mask to clear out the lower 8 bits
 			primer = 0xFF00 & primer;    
 			primer = primer >> 8;
-			MessagePacket[2]  = static_cast<guint8> (primer);
+			MessagePckt[2]  = static_cast<guint8> (primer);
 		 // "and" using this mask to clear out the lower 8 bits
 			int16_t  segund = 0xabcd;
 			segund = 0x00FF & segund;
-			MessagePacket[3] = static_cast<guint8> (segund);
+			MessagePckt[3] = static_cast<guint8> (segund);
 			
 			// DiferenciaPeso  = TmpNuevoPesoRaw - PesoRaw; 
 
 			DiferenciaPeso  = 0xabcd; 
-			Skale::UtilInserta(difer, DiferenciaPeso, MessagePacket);	
+			Skale::UtilInserta(difer, DiferenciaPeso, MessagePckt);	
 			// Recordar estado actual
 			PesoRaw 		= TmpNuevoPesoRaw; 
 
-			TmpXor = MessagePacket[0];        
+			TmpXor = MessagePckt[0];        
 			for(int i=1; i<=5; i++)  // Calcula xor
-				{ TmpXor = TmpXor ^ MessagePacket[i]; }
-			MessagePacket[6] = TmpXor;
+				{ TmpXor = TmpXor ^ MessagePckt[i]; }
+			MessagePckt[6] = TmpXor;
 			   
 		}   // Termino del scope libera SkaleMutex
 		// Notify --- Cada PERIODO haya o no cambios la Caracteristica se encargara de pedir

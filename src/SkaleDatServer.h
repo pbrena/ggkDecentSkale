@@ -47,7 +47,7 @@ public:
 	static bool    LedOn;
 	static bool    GramsOn;
 	static bool    TimerOn;
-	static std::vector<guint8> MessagePacket; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
+	static std::vector<guint8> MessagePckt; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
 	//
 	// Constans
 	//
@@ -77,8 +77,8 @@ public:
 	// This method will block until the SkaleCont thread joins
 	static bool stop();
 
-	static std::vector<guint8> CurrentPacket();
-	static bool SkaleProcKmd(const std::vector<guint8> &SkaleKmd);
+	static std::vector<guint8> &CurrentPacket();
+	static bool SkaleProcKmd(std::vector<guint8>& SkaleKmd);
 
 	// Our thread interface, which simply launches our the thread processor on our Skale instance
 	// This mehtod should not be called directly. Rather, it is started with start/stop methods
