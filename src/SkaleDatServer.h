@@ -47,12 +47,15 @@ public:
 	static bool    LedOn;
 	static bool    GramsOn;
 	static bool    TimerOn;
-	static std::vector<guint8> MessagePacket; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
+//#define  kMesPckSize  7  // Message packets of fixed size
+	// 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
+	static std::vector<guint8> MessagePckt; 
 	//
 	// Constans
 	//
 	// Wait time before new scale values update cycle
 	static const int16_t kRescanTimeMS = 100;
+	// static const size_t  kMesPckSize   = 7;  // Message packets of fixed size
 
 	//
 	// Methods
@@ -77,8 +80,8 @@ public:
 	// This method will block until the SkaleCont thread joins
 	static bool stop();
 
-	static std::vector<guint8> CurrentPacket();
-	static bool SkaleProcKmd(const std::vector<guint8> &SkaleKmd);
+	static std::vector<guint8> &CurrentPacket();
+	static bool SkaleProcKmd(std::vector<guint8>& SkaleKmd);
 
 	// Our thread interface, which simply launches our the thread processor on our Skale instance
 	// This mehtod should not be called directly. Rather, it is started with start/stop methods
@@ -106,7 +109,7 @@ private:
 	//
 	// Methods
 	//
-	static void    UtilInserta(int16_t Cual, int16_t Valor, std::vector<guint8>& Mensaje);
+	static void    UtilInserta(int16_t index, int16_t Valor, std::vector<guint8>& Mensaje);
 	static void    UtilTare();
 	static int16_t UtilCurrentPesoHW();
 
