@@ -41,7 +41,7 @@ public:
  // This method will block until the SkaleCont thread joins
 	static bool stop();
 
- // Used as the Data Getter/Setter by the Servers' "Linker": Standalone.cpp
+ // Used as the Data Getter/Setter by the Servers' "Linker": LaunchDecent.cpp
 	static std::vector<guint8> &CurrentPacket ();
 	static bool                 ProcesKmd     (std::vector<guint8>& SkaleKmd);
 

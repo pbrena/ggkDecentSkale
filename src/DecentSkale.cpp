@@ -197,7 +197,7 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 		{
 			LogFatal((std::string("Unknown parameter: '") + arg + "'").c_str());
 			LogFatal("");
-			LogFatal("Usage: standalone [-q | -v | -d]");
+			LogFatal("Usage: LaunchDecent [-q | -v | -d]");
 			return -1;
 		}
 	}
