@@ -174,14 +174,11 @@ void Skale::UtilTare()
 int16_t Skale::UtilCurrentPesoHW()
 {
  // NO Logger --- Se llama cada decima de segundo  
-	 // Tempo: Numeros Aleatorios
-	// int16_t TmpLeePesoRaw =  rand() % 0xFFFF;
-	// if ( 0 == TmpLeePesoRaw ) {
-	// 	Logger::error("DDDDDAAAA  CCCERO");
-	// }
+ // int16_t TmpLeePesoRaw =  0xabcd;
+ // Tempo: Numeros Aleatorios
+ // INT16_MAX es "Macro constants"
 
-	int16_t TmpLeePesoRaw =  0xabcd;
-	return  TmpLeePesoRaw;
+	return  rand() % INT16_MAX;
 }
 
 // Our thread interface, which simply launches our the thread processor on our Skale instance
