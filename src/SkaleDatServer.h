@@ -27,88 +27,84 @@
 #include <glib.h> // Para acceder a GVariant
 #include <random> // Temporal pa generar simulacion de Peso
 
-class Skale
+class Skale      // Singleton (c++11)
 {
 public:
 
 	//
-	// Variables
-	//
-	
-	// Used or sake of Thread-safety <<<---
-	static std::mutex SkaleMutex;
-
-	static bool    BanderaCiclo;  // bandera para terminar ciclo continuo
-	static int16_t PesoRaw;      // Grams * 10
-	static int16_t PesoConTara;
-	static int16_t OffsetPaTara;
-	static int16_t DiferenciaPeso;
-	static uint8_t WeightStable;
-	static bool    LedOn;
-	static bool    GramsOn;
-	static bool    TimerOn;
-//#define  kMesPckSize  7  // Message packets of fixed size
-	// 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
-	static std::vector<guint8> MessagePckt; 
-	//
-	// Constans
-	//
-	// Wait time before new scale values update cycle
-	static const int16_t kRescanTimeMS = 100;
-	// static const size_t  kMesPckSize   = 7;  // Message packets of fixed size
-
-	//
 	// Methods
 	//
-	// Returns the instance to this singleton class
-	// Al llamar 1a vez crea la instancia???
+
+ // Returns the instance to this singleton class
 	static Skale &getInstance()
 	{
 		static Skale instance;
 		return instance;
 	}
-	//
-	// Disallow copies of our singleton (c++11)
-	//
-	Skale(Skale const&) = delete;
-	void operator=(Skale const&) = delete;
 
-	// If the thread is already running, this method will fail
-	// Note that it shouldn't be necessary to connect manually; 
-	// Returns true if the Skale thread initiates otherwise false
-	static bool start();
-	// This method will block until the SkaleCont thread joins
-	static bool stop();
-
-	static std::vector<guint8> &CurrentPacket();
-	static bool SkaleProcKmd(std::vector<guint8>& SkaleKmd);
-
-	// Our thread interface, which simply launches our the thread processor on our Skale instance
-	// This mehtod should not be called directly. Rather, it is started with start/stop methods
+ // Was required to be Public
+ // Our thread interface, which simply launches our the thread processor on our Skale instance
+ // This mehtod should not be called directly. Rather, it is started with start/stop methods
 	static void runContThread();
+
+ // Returns true if the Skale thread initiates succesfully,
+ // if the thread was already running, this method will fail
+	static bool start();
+
+ // This method will block until the SkaleCont thread joins
+	static bool stop();
+ // Used as the Data Getter/Setter by the Servers' "Linker": Standalone.cpp
+	static std::vector<guint8> &CurrentPacket ();
+	static bool                 ProcesKmd     (std::vector<guint8>& SkaleKmd);
 
 private:
 
 	// Private constructor for our Singleton force use of getInstanc
 	Skale() { };
 	//
-	// Constants
+	// Disallow copies of our Singleton (c++11)
 	//
-	// Our continous thread listens for events coming from the adapter and deals with them appropriately
+	Skale(Skale const&) = delete;
+	void operator=(Skale const&) = delete;
+
 	static std::thread contThread;
 
-	static const guint8  peso  = 2;   // Posicion del Peso
-	static const guint8  difer = 4;   // Posicion de la diferencia
+	//
+	// Variables
+	//
 
-	static const guint8 kSkaleStable    = 0xCE; // weight stable
-	static const guint8 kSkaleChning    = 0xCA; // weight changing
-	static const guint8 kSkaleLEDnGrKmd = 0x0A; // LED and grams on/off
-	static const guint8 kSkaleTimerKmd  = 0x0B; // Timer on/off
-	static const guint8 kSkaleTareKmd   = 0x0F; // UtilTare
+	static std::mutex	SkaleMutex;	   // Used or sake of Thread-safety <<<---
+	static bool			BanderaCiclo;  // bandera para terminar ciclo continuo
+	static int16_t		PesoRaw;       // Grams * 10
+	static int16_t		PesoConTara;
+	static int16_t		OffsetPaTara;
+	static int16_t		DiferenciaPeso;
+	static uint8_t		WeightStable;
+	static bool			LedOn;
+	static bool			GramsOn;
+	static bool			TimerOn;
+ // It really is a fixed size array, used just to follow D-Bus formats
+ // Index: 0-1er=Decent id  1-2o Stability  2-Peso      4-Dif       6-xor      
+ //        03=Decent Type   CE=weightstable xxxx=weight xxxx=Change XorValidation
+	static std::vector<guint8> MessagePckt; 
+
+	//
+	// Constants
+	//
+
+	static const int16_t kRescanTimeMS   = 99;
+	static const int16_t kPeso           = 2;   // Posicion del Peso
+	static const int16_t kDifer          = 4;   // Posicion de la diferencia
+	static const guint8  kSkaleStable    = 0xCE; // weight stable
+	static const guint8  kSkaleChning    = 0xCA; // weight changing
+	static const guint8  kSkaleLEDnGrKmd = 0x0A; // LED and grams on/off
+	static const guint8  kSkaleTimerKmd  = 0x0B; // Timer on/off
+	static const guint8  kSkaleTareKmd   = 0x0F; // UtilTare
 
 	//
 	// Methods
 	//
+
 	static void    UtilInserta(int16_t index, int16_t Valor, std::vector<guint8>& Mensaje);
 	static void    UtilTare();
 	static int16_t UtilCurrentPesoHW();

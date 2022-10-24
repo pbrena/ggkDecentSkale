@@ -157,9 +157,9 @@ int dataSetter(const char *pName, const void *pData)
 		// Aqui parace resolver el valor enviado (vector) por el write a partir del apuntador
 		KomndCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
 		 // Ojo llama al procesador de comandos que es boolano
-		if ( !Skale::getInstance().SkaleProcKmd(KomndCharVectorBuffr) )
+		if ( !Skale::getInstance().ProcesKmd(KomndCharVectorBuffr) )
 			{ 
-				LogError("Warning: SkaleProcKmd -> false, fallo"); 
+				LogError("Warning: ProcesKmd -> false, fallo"); 
 				return 0; 
 			} 
 		LogDebug((std::string("Server data: komand vector received")).c_str());

@@ -44,7 +44,7 @@ bool    Skale::TimerOn;
 std::vector<guint8> Skale::MessagePckt; 
 
 //
-// Variables Temporales
+// Variables Temporales ojo no estan en la clase Skale
 //
 std::vector<guint8> TmpPckt; 
 guint8              TmpXor; // Ojo hay otra parecida en el Scope de Cont
@@ -57,22 +57,23 @@ std::thread Skale::contThread;
 // itself because it leads to a dangling reference.
 std::vector<guint8> &Skale::CurrentPacket()
 {
+ // NOT alocal variable 
 	TmpPckt.clear();
  // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 	std::lock_guard<std::mutex> lk(SkaleMutex); 
- // el MessagePckt se actualiza continuamente, se copia a Mensaje Temporal
+ // el MessagePckt se actualiza continuamente, es por eso que se copia a Mensaje Temporal
  // de forma "Thread Safe"
 	TmpPckt = MessagePckt; 
  // NOT alocal variable 
 	return TmpPckt; 
 }
 
-// Ojo: en este ejemplo como que se pasa apuntador tambien (pero de otra forma diferente a
-// "by Reference"
-// bool Skale::SkaleProcKmd(const std::vector<guint8> &SkaleKmd)
+// Ojo: en este otro ejemplo como que se pasa apuntador tambien (pero de otra forma
+// diferente a "by Reference" creo se copia el apuntador
+// bool Skale::ProcesKmd(const std::vector<guint8> &SkaleKmd)
 
-// Optaremos por: by Reference: use & example:  vector<int>& Parm
-bool Skale::SkaleProcKmd( std::vector<guint8>& SkaleKmd )
+// Optaremos por: by Reference: use & example:  vector<"type">& Parm
+bool Skale::ProcesKmd( std::vector<guint8>& SkaleKmd )
 {
  // Verify Parity
 	TmpXor = SkaleKmd[0] ;          
@@ -93,25 +94,25 @@ bool Skale::SkaleProcKmd( std::vector<guint8>& SkaleKmd )
 		 // Null Action for now
 		 // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 			if (true) { // Scope only
-				Logger::trace("SkaleProcKmd locks Skale Mutex to update LED & Gram");
+				Logger::trace("ProcesKmd locks Skale Mutex to update LED & Gram");
 				std::lock_guard<std::mutex> lk(SkaleMutex); 
 				LedOn   = true;
 				GramsOn = true;
-				Logger::trace("SkaleProcKmd releases Skale Mutex LED & Gram");
+				Logger::trace("ProcesKmd releases Skale Mutex LED & Gram");
 			}
 		return true;
 		case kSkaleTimerKmd :   //Timer 
 		 // Null Action for now
 		 // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 			if (true) { // Scope only
-				Logger::trace("SkaleProcKmd locks Skale Mutex to update Timer");
+				Logger::trace("ProcesKmd locks Skale Mutex to update Timer");
 				std::lock_guard<std::mutex> lk(SkaleMutex); 
 				TimerOn = true;
-				Logger::trace("SkaleProcKmd releses Skale Mutex to update Timer");
+				Logger::trace("ProcesKmd releses Skale Mutex to update Timer");
 			}
 		return true;
 		default : // command corrupted --> Abort 
-			Logger::trace("SkaleProcKmd: Kmd Wrong kmd");
+			Logger::trace("ProcesKmd: Kmd Wrong kmd");
 		return false;
 	}
 	return true;
@@ -123,14 +124,13 @@ bool Skale::SkaleProcKmd( std::vector<guint8>& SkaleKmd )
 // When passed by value, a copy of the vector is created. This new copy of the vector
 // is then used in the function and thus, any changes made to the vector in the function 
 // do not affect the original vector.
-// So to modify -- by Reference: use & example:  vector<int>& Parm
+// So to modify -- by Reference: use & example:  vector<"type">& Parm
 void Skale::UtilInserta(int16_t index, int16_t Valor, std::vector<guint8>& Mensaje)
 {
-
  // Uno de los problemas fue no poner guint8 en static_cast, era Char o uint8? 
 	Mensaje[index]   =  static_cast<guint8> ((0xFF00 & Valor) >> 8);
 	Mensaje[index+1] =  static_cast<guint8>  (0x00FF & Valor);
- // Otro problema Parentesis, los que siguen al static_cast<guint8>
+ // Otro problema: Parentesis, los que siguen al static_cast<guint8>
  // & "and" using this mask to clear out (some) 8 bits
 
 	/* Ejemplo elegante pero depende de Big/Little Endianess
@@ -159,9 +159,9 @@ void Skale::UtilTare()
  // Se asume estabilidad x un momento
 	MessagePckt[1] = kSkaleStable;    // 2o byte = Parm Estabilidad
  //	MessagePckt[2] = PesoConTara;     // 3o y 4o. bytes Peso 
-	Skale::UtilInserta(peso,  PesoConTara,    MessagePckt);
+	Skale::UtilInserta(kPeso,  PesoConTara,    MessagePckt);
  //	MessagePckt[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
-	Skale::UtilInserta(difer, DiferenciaPeso, MessagePckt);	           
+	Skale::UtilInserta(kDifer, DiferenciaPeso, MessagePckt);	           
  // Calcular y actualizar nueva paridad
 	TmpXor = MessagePckt[0];        
 	for(int i=1; i<=5; i++)  // Calcula xor
@@ -190,16 +190,17 @@ void runContThread()
 	Skale::getInstance().runContThread();
 }
 
-// This mehtod should not be called directly. Rather, it is started with start/stop methods
-// it runs continuously on a thread until the data server shuts down
+// This mehtod should not be called directly. Rather, it is referenced with start/stop methods
+// it runs continuously on its own thread until the data server shuts down
 void Skale::runContThread()
 {
 	Logger::trace("Entering the Skale runCont Thread");
 
  // Tempo: Iniciar Numeros Aleatorios
 	srand(time(NULL));
-
- // Class Variable initial values
+ //
+ // Class Variables initialization
+ //
 	BanderaCiclo   = true;        // bandera para mantener ciclo continuo
 	PesoRaw        = 0x0000;      // Grams * 10
 	PesoConTara    = 0x0000;
@@ -208,10 +209,12 @@ void Skale::runContThread()
 	LedOn          = false;
 	GramsOn        = true;
 	TimerOn        = false;
-	//               0-1o 1-2o 2-Peso    4-Dif     6-xor    
-	MessagePckt = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 
+	// It really is a fixed size array, used just to follow D-Bus formats
+	//                0-1o 1-2o 2-Peso    4-Dif     6-xor    
+	MessagePckt    = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 	MessagePckt.shrink_to_fit();
+	TmpPckt        = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 	TmpPckt.shrink_to_fit();
 
- // Local Vars
+ // Methods (Cont) Local Vars
 	int16_t TmpContNvoRaw;   
 	guint8  TmpContXor;
 	bool    TmpContBandera = true;    // Continua ciclo? Inicialmente SI
@@ -240,11 +243,11 @@ void Skale::runContThread()
 			
 		 // 3o. y 4o. Byte Peso
 			PesoConTara     = TmpContNvoRaw - OffsetPaTara;
-			Skale::UtilInserta(peso,  PesoConTara,    MessagePckt);   
+			Skale::UtilInserta(kPeso,  PesoConTara,    MessagePckt);   
 			
 		 // 5o. y 6o. Byte Peso
 			DiferenciaPeso  = TmpContNvoRaw - PesoRaw; 
-			Skale::UtilInserta(difer, DiferenciaPeso, MessagePckt);	
+			Skale::UtilInserta(kDifer, DiferenciaPeso, MessagePckt);	
 
 		 // 7o. Byte - Actualizar byte de paridad
 			TmpContXor = MessagePckt[0];        
