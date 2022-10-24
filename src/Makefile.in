@@ -87,7 +87,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-noinst_PROGRAMS = standalone$(EXEEXT)
+noinst_PROGRAMS = LaunchDecent$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -119,13 +119,13 @@ am_libggk_a_OBJECTS = libggk_a-DBusInterface.$(OBJEXT) \
 	libggk_a-HciSocket.$(OBJEXT) libggk_a-Init.$(OBJEXT) \
 	libggk_a-Logger.$(OBJEXT) libggk_a-Mgmt.$(OBJEXT) \
 	libggk_a-Server.$(OBJEXT) libggk_a-ServerUtils.$(OBJEXT) \
-	libggk_a-standalone.$(OBJEXT) libggk_a-Utils.$(OBJEXT)
+	libggk_a-LaunchDecent.$(OBJEXT) libggk_a-Utils.$(OBJEXT)
 libggk_a_OBJECTS = $(am_libggk_a_OBJECTS)
-am_standalone_OBJECTS = standalone-SkaleDatServer.$(OBJEXT) \
-	standalone-standalone.$(OBJEXT)
-standalone_OBJECTS = $(am_standalone_OBJECTS)
-standalone_DEPENDENCIES = libggk.a
-standalone_LINK = $(CXXLD) $(standalone_CXXFLAGS) $(CXXFLAGS) \
+am_LaunchDecent_OBJECTS = LaunchDecent-SkaleDatServer.$(OBJEXT) \
+	LaunchDecent-LaunchDecent.$(OBJEXT)
+LaunchDecent_OBJECTS = $(am_LaunchDecent_OBJECTS)
+LaunchDecent_DEPENDENCIES = libggk.a
+LaunchDecent_LINK = $(CXXLD) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -142,7 +142,9 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/libggk_a-DBusInterface.Po \
+am__depfiles_remade = ./$(DEPDIR)/LaunchDecent-LaunchDecent.Po \
+	./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po \
+	./$(DEPDIR)/libggk_a-DBusInterface.Po \
 	./$(DEPDIR)/libggk_a-DBusMethod.Po \
 	./$(DEPDIR)/libggk_a-DBusObject.Po \
 	./$(DEPDIR)/libggk_a-GattCharacteristic.Po \
@@ -153,13 +155,11 @@ am__depfiles_remade = ./$(DEPDIR)/libggk_a-DBusInterface.Po \
 	./$(DEPDIR)/libggk_a-Gobbledegook.Po \
 	./$(DEPDIR)/libggk_a-HciAdapter.Po \
 	./$(DEPDIR)/libggk_a-HciSocket.Po ./$(DEPDIR)/libggk_a-Init.Po \
+	./$(DEPDIR)/libggk_a-LaunchDecent.Po \
 	./$(DEPDIR)/libggk_a-Logger.Po ./$(DEPDIR)/libggk_a-Mgmt.Po \
 	./$(DEPDIR)/libggk_a-Server.Po \
 	./$(DEPDIR)/libggk_a-ServerUtils.Po \
-	./$(DEPDIR)/libggk_a-Utils.Po \
-	./$(DEPDIR)/libggk_a-standalone.Po \
-	./$(DEPDIR)/standalone-SkaleDatServer.Po \
-	./$(DEPDIR)/standalone-standalone.Po
+	./$(DEPDIR)/libggk_a-Utils.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -190,8 +190,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libggk_a_SOURCES) $(standalone_SOURCES)
-DIST_SOURCES = $(libggk_a_SOURCES) $(standalone_SOURCES)
+SOURCES = $(libggk_a_SOURCES) $(LaunchDecent_SOURCES)
+DIST_SOURCES = $(libggk_a_SOURCES) $(LaunchDecent_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -355,19 +355,19 @@ libggk_a_SOURCES = DBusInterface.cpp \
                    Server.h \
                    ServerUtils.cpp \
                    ServerUtils.h \
-                   standalone.cpp \
+                   LaunchDecent.cpp \
                    TickEvent.h \
                    Utils.cpp \
                    Utils.h
 
-# Build our standalone server (linking statically with libggk.a, linking dynamically with GLib)
-standalone_CXXFLAGS = -fPIC -Wall -Wextra -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
-standalone_SOURCES = SkaleDatServer.cpp \
+# Build our LaunchDecent Program (linking statically with libggk.a, linking dynamically with GLib)
+LaunchDecent_CXXFLAGS = -fPIC -Wall -Wextra -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+LaunchDecent_SOURCES = SkaleDatServer.cpp \
                    SkaleDatServer.h \
-                   standalone.cpp 
+                   LaunchDecent.cpp 
 
-standalone_LDADD = libggk.a
-standalone_LDLIBS = $(GLIB_LIBS) $(GIO_LIBS) $(GOBJECT_LIBS)
+LaunchDecent_LDADD = libggk.a
+LaunchDecent_LDLIBS = $(GLIB_LIBS) $(GIO_LIBS) $(GOBJECT_LIBS)
 all: all-am
 
 .SUFFIXES:
@@ -413,9 +413,9 @@ libggk.a: $(libggk_a_OBJECTS) $(libggk_a_DEPENDENCIES) $(EXTRA_libggk_a_DEPENDEN
 	$(AM_V_AR)$(libggk_a_AR) libggk.a $(libggk_a_OBJECTS) $(libggk_a_LIBADD)
 	$(AM_V_at)$(RANLIB) libggk.a
 
-standalone$(EXEEXT): $(standalone_OBJECTS) $(standalone_DEPENDENCIES) $(EXTRA_standalone_DEPENDENCIES) 
-	@rm -f standalone$(EXEEXT)
-	$(AM_V_CXXLD)$(standalone_LINK) $(standalone_OBJECTS) $(standalone_LDADD) $(LIBS)
+LaunchDecent$(EXEEXT): $(LaunchDecent_OBJECTS) $(LaunchDecent_DEPENDENCIES) $(EXTRA_LaunchDecent_DEPENDENCIES) 
+	@rm -f LaunchDecent$(EXEEXT)
+	$(AM_V_CXXLD)$(LaunchDecent_LINK) $(LaunchDecent_OBJECTS) $(LaunchDecent_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -423,6 +423,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LaunchDecent-LaunchDecent.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-DBusInterface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-DBusMethod.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-DBusObject.Po@am__quote@ # am--include-marker
@@ -435,14 +437,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-HciAdapter.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-HciSocket.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-Init.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-LaunchDecent.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-Logger.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-Mgmt.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-Server.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-ServerUtils.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-Utils.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-standalone.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/standalone-SkaleDatServer.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/standalone-standalone.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -688,19 +688,19 @@ libggk_a-ServerUtils.obj: ServerUtils.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -c -o libggk_a-ServerUtils.obj `if test -f 'ServerUtils.cpp'; then $(CYGPATH_W) 'ServerUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/ServerUtils.cpp'; fi`
 
-libggk_a-standalone.o: standalone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -MT libggk_a-standalone.o -MD -MP -MF $(DEPDIR)/libggk_a-standalone.Tpo -c -o libggk_a-standalone.o `test -f 'standalone.cpp' || echo '$(srcdir)/'`standalone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libggk_a-standalone.Tpo $(DEPDIR)/libggk_a-standalone.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='standalone.cpp' object='libggk_a-standalone.o' libtool=no @AMDEPBACKSLASH@
+libggk_a-LaunchDecent.o: LaunchDecent.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -MT libggk_a-LaunchDecent.o -MD -MP -MF $(DEPDIR)/libggk_a-LaunchDecent.Tpo -c -o libggk_a-LaunchDecent.o `test -f 'LaunchDecent.cpp' || echo '$(srcdir)/'`LaunchDecent.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libggk_a-LaunchDecent.Tpo $(DEPDIR)/libggk_a-LaunchDecent.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='LaunchDecent.cpp' object='libggk_a-LaunchDecent.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -c -o libggk_a-standalone.o `test -f 'standalone.cpp' || echo '$(srcdir)/'`standalone.cpp
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -c -o libggk_a-LaunchDecent.o `test -f 'LaunchDecent.cpp' || echo '$(srcdir)/'`LaunchDecent.cpp
 
-libggk_a-standalone.obj: standalone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -MT libggk_a-standalone.obj -MD -MP -MF $(DEPDIR)/libggk_a-standalone.Tpo -c -o libggk_a-standalone.obj `if test -f 'standalone.cpp'; then $(CYGPATH_W) 'standalone.cpp'; else $(CYGPATH_W) '$(srcdir)/standalone.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libggk_a-standalone.Tpo $(DEPDIR)/libggk_a-standalone.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='standalone.cpp' object='libggk_a-standalone.obj' libtool=no @AMDEPBACKSLASH@
+libggk_a-LaunchDecent.obj: LaunchDecent.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -MT libggk_a-LaunchDecent.obj -MD -MP -MF $(DEPDIR)/libggk_a-LaunchDecent.Tpo -c -o libggk_a-LaunchDecent.obj `if test -f 'LaunchDecent.cpp'; then $(CYGPATH_W) 'LaunchDecent.cpp'; else $(CYGPATH_W) '$(srcdir)/LaunchDecent.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libggk_a-LaunchDecent.Tpo $(DEPDIR)/libggk_a-LaunchDecent.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='LaunchDecent.cpp' object='libggk_a-LaunchDecent.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -c -o libggk_a-standalone.obj `if test -f 'standalone.cpp'; then $(CYGPATH_W) 'standalone.cpp'; else $(CYGPATH_W) '$(srcdir)/standalone.cpp'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -c -o libggk_a-LaunchDecent.obj `if test -f 'LaunchDecent.cpp'; then $(CYGPATH_W) 'LaunchDecent.cpp'; else $(CYGPATH_W) '$(srcdir)/LaunchDecent.cpp'; fi`
 
 libggk_a-Utils.o: Utils.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -MT libggk_a-Utils.o -MD -MP -MF $(DEPDIR)/libggk_a-Utils.Tpo -c -o libggk_a-Utils.o `test -f 'Utils.cpp' || echo '$(srcdir)/'`Utils.cpp
@@ -716,33 +716,33 @@ libggk_a-Utils.obj: Utils.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libggk_a_CXXFLAGS) $(CXXFLAGS) -c -o libggk_a-Utils.obj `if test -f 'Utils.cpp'; then $(CYGPATH_W) 'Utils.cpp'; else $(CYGPATH_W) '$(srcdir)/Utils.cpp'; fi`
 
-standalone-SkaleDatServer.o: SkaleDatServer.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -MT standalone-SkaleDatServer.o -MD -MP -MF $(DEPDIR)/standalone-SkaleDatServer.Tpo -c -o standalone-SkaleDatServer.o `test -f 'SkaleDatServer.cpp' || echo '$(srcdir)/'`SkaleDatServer.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/standalone-SkaleDatServer.Tpo $(DEPDIR)/standalone-SkaleDatServer.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkaleDatServer.cpp' object='standalone-SkaleDatServer.o' libtool=no @AMDEPBACKSLASH@
+LaunchDecent-SkaleDatServer.o: SkaleDatServer.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -MT LaunchDecent-SkaleDatServer.o -MD -MP -MF $(DEPDIR)/LaunchDecent-SkaleDatServer.Tpo -c -o LaunchDecent-SkaleDatServer.o `test -f 'SkaleDatServer.cpp' || echo '$(srcdir)/'`SkaleDatServer.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/LaunchDecent-SkaleDatServer.Tpo $(DEPDIR)/LaunchDecent-SkaleDatServer.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkaleDatServer.cpp' object='LaunchDecent-SkaleDatServer.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -c -o standalone-SkaleDatServer.o `test -f 'SkaleDatServer.cpp' || echo '$(srcdir)/'`SkaleDatServer.cpp
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -c -o LaunchDecent-SkaleDatServer.o `test -f 'SkaleDatServer.cpp' || echo '$(srcdir)/'`SkaleDatServer.cpp
 
-standalone-SkaleDatServer.obj: SkaleDatServer.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -MT standalone-SkaleDatServer.obj -MD -MP -MF $(DEPDIR)/standalone-SkaleDatServer.Tpo -c -o standalone-SkaleDatServer.obj `if test -f 'SkaleDatServer.cpp'; then $(CYGPATH_W) 'SkaleDatServer.cpp'; else $(CYGPATH_W) '$(srcdir)/SkaleDatServer.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/standalone-SkaleDatServer.Tpo $(DEPDIR)/standalone-SkaleDatServer.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkaleDatServer.cpp' object='standalone-SkaleDatServer.obj' libtool=no @AMDEPBACKSLASH@
+LaunchDecent-SkaleDatServer.obj: SkaleDatServer.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -MT LaunchDecent-SkaleDatServer.obj -MD -MP -MF $(DEPDIR)/LaunchDecent-SkaleDatServer.Tpo -c -o LaunchDecent-SkaleDatServer.obj `if test -f 'SkaleDatServer.cpp'; then $(CYGPATH_W) 'SkaleDatServer.cpp'; else $(CYGPATH_W) '$(srcdir)/SkaleDatServer.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/LaunchDecent-SkaleDatServer.Tpo $(DEPDIR)/LaunchDecent-SkaleDatServer.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkaleDatServer.cpp' object='LaunchDecent-SkaleDatServer.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -c -o standalone-SkaleDatServer.obj `if test -f 'SkaleDatServer.cpp'; then $(CYGPATH_W) 'SkaleDatServer.cpp'; else $(CYGPATH_W) '$(srcdir)/SkaleDatServer.cpp'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -c -o LaunchDecent-SkaleDatServer.obj `if test -f 'SkaleDatServer.cpp'; then $(CYGPATH_W) 'SkaleDatServer.cpp'; else $(CYGPATH_W) '$(srcdir)/SkaleDatServer.cpp'; fi`
 
-standalone-standalone.o: standalone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -MT standalone-standalone.o -MD -MP -MF $(DEPDIR)/standalone-standalone.Tpo -c -o standalone-standalone.o `test -f 'standalone.cpp' || echo '$(srcdir)/'`standalone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/standalone-standalone.Tpo $(DEPDIR)/standalone-standalone.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='standalone.cpp' object='standalone-standalone.o' libtool=no @AMDEPBACKSLASH@
+LaunchDecent-LaunchDecent.o: LaunchDecent.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -MT LaunchDecent-LaunchDecent.o -MD -MP -MF $(DEPDIR)/LaunchDecent-LaunchDecent.Tpo -c -o LaunchDecent-LaunchDecent.o `test -f 'LaunchDecent.cpp' || echo '$(srcdir)/'`LaunchDecent.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/LaunchDecent-LaunchDecent.Tpo $(DEPDIR)/LaunchDecent-LaunchDecent.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='LaunchDecent.cpp' object='LaunchDecent-LaunchDecent.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -c -o standalone-standalone.o `test -f 'standalone.cpp' || echo '$(srcdir)/'`standalone.cpp
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -c -o LaunchDecent-LaunchDecent.o `test -f 'LaunchDecent.cpp' || echo '$(srcdir)/'`LaunchDecent.cpp
 
-standalone-standalone.obj: standalone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -MT standalone-standalone.obj -MD -MP -MF $(DEPDIR)/standalone-standalone.Tpo -c -o standalone-standalone.obj `if test -f 'standalone.cpp'; then $(CYGPATH_W) 'standalone.cpp'; else $(CYGPATH_W) '$(srcdir)/standalone.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/standalone-standalone.Tpo $(DEPDIR)/standalone-standalone.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='standalone.cpp' object='standalone-standalone.obj' libtool=no @AMDEPBACKSLASH@
+LaunchDecent-LaunchDecent.obj: LaunchDecent.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -MT LaunchDecent-LaunchDecent.obj -MD -MP -MF $(DEPDIR)/LaunchDecent-LaunchDecent.Tpo -c -o LaunchDecent-LaunchDecent.obj `if test -f 'LaunchDecent.cpp'; then $(CYGPATH_W) 'LaunchDecent.cpp'; else $(CYGPATH_W) '$(srcdir)/LaunchDecent.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/LaunchDecent-LaunchDecent.Tpo $(DEPDIR)/LaunchDecent-LaunchDecent.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='LaunchDecent.cpp' object='LaunchDecent-LaunchDecent.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(standalone_CXXFLAGS) $(CXXFLAGS) -c -o standalone-standalone.obj `if test -f 'standalone.cpp'; then $(CYGPATH_W) 'standalone.cpp'; else $(CYGPATH_W) '$(srcdir)/standalone.cpp'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -c -o LaunchDecent-LaunchDecent.obj `if test -f 'LaunchDecent.cpp'; then $(CYGPATH_W) 'LaunchDecent.cpp'; else $(CYGPATH_W) '$(srcdir)/LaunchDecent.cpp'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -868,7 +868,9 @@ clean-am: clean-generic clean-noinstLIBRARIES clean-noinstPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/libggk_a-DBusInterface.Po
+		-rm -f ./$(DEPDIR)/LaunchDecent-LaunchDecent.Po
+	-rm -f ./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po
+	-rm -f ./$(DEPDIR)/libggk_a-DBusInterface.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusMethod.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusObject.Po
 	-rm -f ./$(DEPDIR)/libggk_a-GattCharacteristic.Po
@@ -880,14 +882,12 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/libggk_a-HciAdapter.Po
 	-rm -f ./$(DEPDIR)/libggk_a-HciSocket.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Init.Po
+	-rm -f ./$(DEPDIR)/libggk_a-LaunchDecent.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Logger.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Mgmt.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Server.Po
 	-rm -f ./$(DEPDIR)/libggk_a-ServerUtils.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Utils.Po
-	-rm -f ./$(DEPDIR)/libggk_a-standalone.Po
-	-rm -f ./$(DEPDIR)/standalone-SkaleDatServer.Po
-	-rm -f ./$(DEPDIR)/standalone-standalone.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -933,7 +933,9 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/libggk_a-DBusInterface.Po
+		-rm -f ./$(DEPDIR)/LaunchDecent-LaunchDecent.Po
+	-rm -f ./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po
+	-rm -f ./$(DEPDIR)/libggk_a-DBusInterface.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusMethod.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusObject.Po
 	-rm -f ./$(DEPDIR)/libggk_a-GattCharacteristic.Po
@@ -945,14 +947,12 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/libggk_a-HciAdapter.Po
 	-rm -f ./$(DEPDIR)/libggk_a-HciSocket.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Init.Po
+	-rm -f ./$(DEPDIR)/libggk_a-LaunchDecent.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Logger.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Mgmt.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Server.Po
 	-rm -f ./$(DEPDIR)/libggk_a-ServerUtils.Po
 	-rm -f ./$(DEPDIR)/libggk_a-Utils.Po
-	-rm -f ./$(DEPDIR)/libggk_a-standalone.Po
-	-rm -f ./$(DEPDIR)/standalone-SkaleDatServer.Po
-	-rm -f ./$(DEPDIR)/standalone-standalone.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

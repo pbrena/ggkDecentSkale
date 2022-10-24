@@ -1,5 +1,10 @@
 # *FORK README*
 
+Change of name: standalone -> LaunchDecent
+
+sudo ~/ggkDecentSkale/src/LaunchDecent -v
+
+
 if ssh is used ONLY a warning (no problem solving required) message is send:
 
 		perl: warning: Please check that your locale settings:
@@ -30,7 +35,7 @@ During development:
 
 	sudo tail -f /var/log/messages | grep lue
 	sudo dbus-monitor --system
-	sudo ./src/standalone -d
+	sudo ./src/LaunchDecent -d
 
 ******************************************************************************************
 *    End
@@ -56,7 +61,7 @@ Gobbledegook's license changed from GPL to LGPL in hopes that it would be found 
 
 # What is Gobbledegook?
 
-_Gobbledegook_ is a C/C++ standalone Linux [Bluetooth LE](https://en.wikipedia.org/wiki/Bluetooth_Low_Energy) [GATT](https://www.bluetooth.com/specifications/gatt/generic-attributes-overview) server using [BlueZ](http://www.bluez.org/about/) over [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/#index1h1) with [Bluetooth Management API](https://git.kernel.org/pub/scm/bluetooth/bluez.git/tree/doc/mgmt-api.txt) support built in. That's a lot of words, so I shortened it to _Gobbledegook_. Then I shortened it again to _GGK_ because let's be honest, it's a pain to type.
+_Gobbledegook_ is a C/C++ LaunchDecent Linux [Bluetooth LE](https://en.wikipedia.org/wiki/Bluetooth_Low_Energy) [GATT](https://www.bluetooth.com/specifications/gatt/generic-attributes-overview) server using [BlueZ](http://www.bluez.org/about/) over [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/#index1h1) with [Bluetooth Management API](https://git.kernel.org/pub/scm/bluetooth/bluez.git/tree/doc/mgmt-api.txt) support built in. That's a lot of words, so I shortened it to _Gobbledegook_. Then I shortened it again to _GGK_ because let's be honest, it's a pain to type.
 
 For the impatient folks in a hurry (or really just have to pee) skip down to the **Quick-start for the impatient** section at the bottom of this document.
 
@@ -338,7 +343,7 @@ For details on these delegates and their usage, see the comment blocks in `Gobbl
 
 When we build a server description, what we're really doing is building a hierarchical structure of D-Bus objects that conforms to [BlueZ's standards for GATT services](https://git.kernel.org/pub/scm/bluetooth/bluez.git/plain/doc/gatt-api.txt). The `*Begin()` and `*End()` calls are the building blocks for this hierarchy.
 
-GGK uses this server description to build an [XML introspection](https://dbus.freedesktop.org/doc/dbus-specification.html#introspection-format) used to register the object hierarchy with D-Bus. You can view the generated XML for your services by launching the `standalone` application with the `-d` parameter.
+GGK uses this server description to build an [XML introspection](https://dbus.freedesktop.org/doc/dbus-specification.html#introspection-format) used to register the object hierarchy with D-Bus. You can view the generated XML for your services by launching the `LaunchDecent` application with the `-d` parameter.
 
 GGK also uses the server description to implement the [D-Bus ObjectManager](https://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager) interface which is used to describe our services. When we eventually register our application with BlueZ, BlueZ will use our ObjectManager interface to enumerate our services. GGK manages this for us automatically.
 
@@ -408,7 +413,7 @@ You'll need to locate the D-Bus permissions on your box. Likely, you'll find a s
 	  </policy>
 	</busconfig>
 
-Note the `com.gobbledegook` entries in your new `gobbledegook.conf` file. This must match the service name (the first parameter sent to `ggkStart()` in `standalone.cpp`). If you change the service name from `gobbledegook` to `clownface` in that call to `ggkStart()`, then you'll need to edit the `gobbledegook.conf` file and change all occurrances of `com.gobbledegook` to `com.clownface`.
+Note the `com.gobbledegook` entries in your new `gobbledegook.conf` file. This must match the service name (the first parameter sent to `ggkStart()` in `LaunchDecent.cpp`). If you change the service name from `gobbledegook` to `clownface` in that call to `ggkStart()`, then you'll need to edit the `gobbledegook.conf` file and change all occurrances of `com.gobbledegook` to `com.clownface`.
 
 ### Enabling Bluetooth
 
@@ -428,11 +433,11 @@ GGK uses the standard autotools build process:
 
 	./configure && make
 
-This will build `libggk.a` then compile `standalone.cpp` into a program that links with `libggk.a`. There is no `make install` as there is nothing to install.
+This will build `libggk.a` then compile `LaunchDecent.cpp` into a program that links with `libggk.a`. There is no `make install` as there is nothing to install.
 
 Then run with:
 
-	sudo src/standalone -d
+	sudo src/LaunchDecent -d
 
 GGK requires super-user privileges when run due to privileges required for D-Bus and HCI sockets. A system can be configured to allow a user to run a GGK server without `sudo`, but that's beyond the scope of this document.
 
@@ -440,9 +445,9 @@ During development, I tend to run these three commands, each in their own termin
 
 	sudo tail -f /var/log/syslog | grep bluetoothd
 	sudo dbus-monitor --system
-	sudo ./src/standalone -d
+	sudo ./src/LaunchDecent -d
 
-With no parameters, `standalone` will output only service level output (starting stopping errors, etc.) Additional output parameters are:
+With no parameters, `LaunchDecent` will output only service level output (starting stopping errors, etc.) Additional output parameters are:
 	
 	`-q`        Quiet - errors only
 	`-v`        Verbose - include info log levels
@@ -458,7 +463,7 @@ Think of Gobbledegook as a template BLE library. You're expected to modify `Serv
 
 Just link against `libggk.a` and include `include/Gobbledegook.h` to access the public API in your app.  You may notice that the public interface isn't documented here. Instead, it is documented in `include/Gobbledegook.h`.
 
-You can use `standalone.cpp` as a reference on how to get things setup in your code.
+You can use `LaunchDecent.cpp` as a reference on how to get things setup in your code.
 
 # Other handy references
 
@@ -470,7 +475,7 @@ The [GLib Reference Manual](https://developer.gnome.org/glib/stable/) covers man
 
 # Reference output
 
-The following is the output from a reference tool used to connect to the `standalone` server running with the sample services. The output shows data read from the server over BLE. Note that the hieararchy may not match 1:1 with that of the samples, since some features are automatically provided by BlueZ. In addition, the reference tool periodically writes updates to the `Text string` service (hence the appended text, *"(updated: 3 times)"*.)
+The following is the output from a reference tool used to connect to the `LaunchDecent` server running with the sample services. The output shows data read from the server over BLE. Note that the hieararchy may not match 1:1 with that of the samples, since some features are automatically provided by BlueZ. In addition, the reference tool periodically writes updates to the `Text string` service (hence the appended text, *"(updated: 3 times)"*.)
 
 	Connected to Gobbledook
 
@@ -530,10 +535,10 @@ The following is the output from a reference tool used to connect to the `standa
 
 # Quick-start for the impatient
 
-**Build** with `./configure && make`. This will build `libggk.a` then compile `standalone.cpp` into a program that links with `libggk.a`.
+**Build** with `./configure && make`. This will build `libggk.a` then compile `LaunchDecent.cpp` into a program that links with `libggk.a`.
 
-**Run** `sudo ./src/standalone -d`. This will require your machine to be setup correctly with `BlueZ` and working BLE hardware. Don't forget the `sudo`; you'll need it unless you configure the appropriate permissions for your user to access to D-Bus and the HCI socket. Options are: `-e` (errors-only output), `-v` (verbose output), `-d` (debug output)
+**Run** `sudo ./src/LaunchDecent -d`. This will require your machine to be setup correctly with `BlueZ` and working BLE hardware. Don't forget the `sudo`; you'll need it unless you configure the appropriate permissions for your user to access to D-Bus and the HCI socket. Options are: `-e` (errors-only output), `-v` (verbose output), `-d` (debug output)
 
 **Coding** your own BLE services is actually very easy once you become a little familiar with things. Think of Gobbledegook as a template BLE library. You're expected to modify `Server.cpp` and replace the example services with your own. Do yourself a favor and scan through the **Implementing services with GGK** section. It's your quickest path to understanding the foundation.
 
-**Integrating** into your app is easy: just link against `libggk.a` and include `include/Gobbledegook.h` where needed. Use `standalone.cpp` as a template for getting things setup in your code.
+**Integrating** into your app is easy: just link against `libggk.a` and include `include/Gobbledegook.h` where needed. Use `LaunchDecent.cpp` as a template for getting things setup in your code.
