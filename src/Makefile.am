@@ -36,15 +36,15 @@ libggk_a_SOURCES = DBusInterface.cpp \
                    Server.h \
                    ServerUtils.cpp \
                    ServerUtils.h \
-                   standalone.cpp \
+                   LaunchDecent.cpp \
                    TickEvent.h \
                    Utils.cpp \
                    Utils.h
-# Build our standalone server (linking statically with libggk.a, linking dynamically with GLib)
-standalone_CXXFLAGS = -fPIC -Wall -Wextra -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
-noinst_PROGRAMS = standalone
-standalone_SOURCES = SkaleDatServer.cpp \
+# Build our LaunchDecent Program (linking statically with libggk.a, linking dynamically with GLib)
+LaunchDecent_CXXFLAGS = -fPIC -Wall -Wextra -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+noinst_PROGRAMS = LaunchDecent
+LaunchDecent_SOURCES = SkaleDatServer.cpp \
                    SkaleDatServer.h \
-                   standalone.cpp 
-standalone_LDADD = libggk.a
-standalone_LDLIBS = $(GLIB_LIBS) $(GIO_LIBS) $(GOBJECT_LIBS)
+                   LaunchDecent.cpp 
+LaunchDecent_LDADD = libggk.a
+LaunchDecent_LDLIBS = $(GLIB_LIBS) $(GIO_LIBS) $(GOBJECT_LIBS)
