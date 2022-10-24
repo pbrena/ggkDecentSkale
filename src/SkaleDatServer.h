@@ -47,12 +47,15 @@ public:
 	static bool    LedOn;
 	static bool    GramsOn;
 	static bool    TimerOn;
-	static std::vector<guint8> MessagePckt; // 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
+//#define  kMesPckSize  7  // Message packets of fixed size
+	// 03=Decent Type CE=weightstable xxxx=weight xxxx=Change =XorValidation
+	static std::vector<guint8> MessagePckt; 
 	//
 	// Constans
 	//
 	// Wait time before new scale values update cycle
 	static const int16_t kRescanTimeMS = 100;
+	// static const size_t  kMesPckSize   = 7;  // Message packets of fixed size
 
 	//
 	// Methods
@@ -106,7 +109,7 @@ private:
 	//
 	// Methods
 	//
-	static void    UtilInserta(int16_t Cual, int16_t Valor, std::vector<guint8>& Mensaje);
+	static void    UtilInserta(int16_t index, int16_t Valor, std::vector<guint8>& Mensaje);
 	static void    UtilTare();
 	static int16_t UtilCurrentPesoHW();
 
