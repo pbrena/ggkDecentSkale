@@ -35,29 +35,28 @@ public:
 	// Methods
 	//
 
- // Returns the instance to this singleton class
+ // Returns true if the Skale thread initiates succesfully,
+ // if the thread was already running, this method will fail
+	static bool start();
+ // This method will block until the SkaleCont thread joins
+	static bool stop();
+
+ // Used as the Data Getter/Setter by the Servers' "Linker": Standalone.cpp
+	static std::vector<guint8> &CurrentPacket ();
+	static bool                 ProcesKmd     (std::vector<guint8>& SkaleKmd);
+
+ // Returns the instance to this singleton class Ojo: Solo en =.h
 	static Skale &getInstance()
 	{
 		static Skale instance;
 		return instance;
 	}
-
  // Was required to be Public
  // Our thread interface, which simply launches our the thread processor on our Skale instance
  // This mehtod should not be called directly. Rather, it is started with start/stop methods
 	static void runContThread();
 
- // Returns true if the Skale thread initiates succesfully,
- // if the thread was already running, this method will fail
-	static bool start();
-
- // This method will block until the SkaleCont thread joins
-	static bool stop();
- // Used as the Data Getter/Setter by the Servers' "Linker": Standalone.cpp
-	static std::vector<guint8> &CurrentPacket ();
-	static bool                 ProcesKmd     (std::vector<guint8>& SkaleKmd);
-
-private:
+private: // Practicamente todo 
 
 	// Private constructor for our Singleton force use of getInstanc
 	Skale() { };
