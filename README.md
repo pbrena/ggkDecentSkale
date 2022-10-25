@@ -2,6 +2,9 @@
 
 Change of name: standalone -> LaunchDecent
 
+sudo ~/ggkDecentSkale/src/LaunchDecent -v
+
+
 if ssh is used ONLY a warning (no problem solving required) message is send:
 
 		perl: warning: Please check that your locale settings:
