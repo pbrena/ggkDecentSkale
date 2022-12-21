@@ -40,11 +40,20 @@ libggk_a_SOURCES = DBusInterface.cpp \
                    TickEvent.h \
                    Utils.cpp \
                    Utils.h
+
 # Build our LaunchDecent Program (linking statically with libggk.a, linking dynamically with GLib)
-LaunchDecent_CXXFLAGS = -fPIC -Wall -Wextra -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
-noinst_PROGRAMS = LaunchDecent
+LaunchDecent_CXXFLAGS = -fPIC -Wall -Wextra  -lhx711 -llgpio -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
 LaunchDecent_SOURCES = SkaleDatServer.cpp \
                    SkaleDatServer.h \
                    LaunchDecent.cpp 
 LaunchDecent_LDADD = libggk.a
 LaunchDecent_LDLIBS = $(GLIB_LIBS) $(GIO_LIBS) $(GOBJECT_LIBS)
+
+# Build our Skale Calibration Program  
+SkaleCalibr_CXXFLAGS = -fPIC -Wall -Wextra  -lhx711 -llgpio -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+SkaleCalibr_SOURCES = SkaleCalibr.cpp 
+# Build our SkalePrintConfig Program  
+SkalePrtConfig_CXXFLAGS = -fPIC -Wall -Wextra  -lhx711 -llgpio -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+SkalePrtConfig_SOURCES = SkalePrtConfig.cpp
+
+noinst_PROGRAMS = LaunchDecent SkaleCalibr SkalePrtConfig

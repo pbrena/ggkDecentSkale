@@ -24,8 +24,12 @@
 #include <thread>
 #include <mutex>
 
-#include <glib.h> // Para acceder a GVariant
-#include <random> // Temporal pa generar simulacion de Peso
+#include <glib.h>          // Para acceder a GVariant
+#include <hx711/common.h>  // for Hx711 electronics interface
+#include <iostream>
+#include <future>          // for waiting funcion
+#include <chrono>
+#include <fstream>         // To Write Config File
 
 class Skale      // Singleton (c++11)
 {
@@ -71,8 +75,8 @@ private: // Practicamente todo
 	//
 	// Variables
 	//
-
-	static std::mutex	SkaleMutex;	   // Used or sake of Thread-safety <<<---
+	static HX711::AdvancedHX711* chipHx711; // Interface with external electronic chip
+	static std::mutex	SkaleMutex;	   // Used for Thread-safety <<<---
 	static bool			BanderaCiclo;  // bandera para terminar ciclo continuo
 	static int16_t		PesoRaw;       // Grams * 10
 	static int16_t		PesoConTara;
@@ -82,31 +86,29 @@ private: // Practicamente todo
 	static bool			LedOn;
 	static bool			GramsOn;
 	static bool			TimerOn;
- // It really is a fixed size array, used just to follow D-Bus formats
- // Index: 0-1er=Decent id  1-2o Stability  2-Peso      4-Dif       6-xor      
- //        03=Decent Type   CE=weightstable xxxx=weight xxxx=Change XorValidation
-	static std::vector<guint8> MessagePckt; 
+	static std::vector<guint8> MessagePckt;
 
 	//
-	// Constants
+	// Constants (tokens)
 	//
+	#define hwdataPin	2	// hw - Info for the use of the externam Electronic Chip hx711
+	#define hwclockPin	3	// pins - GPIO
+	#define just1Sample	1 	// hx711  parms
+	#define hwchipRate	HX711::Rate::HZ_80 
 
-	static const int16_t kRescanTimeMS   = 99;
-	static const int16_t kPeso           = 2;   // Posicion del Peso
-	static const int16_t kDifer          = 4;   // Posicion de la diferencia
-	static const guint8  kSkaleStable    = 0xCE; // weight stable
-	static const guint8  kSkaleChning    = 0xCA; // weight changing
-	static const guint8  kSkaleLEDnGrKmd = 0x0A; // LED and grams on/off
-	static const guint8  kSkaleTimerKmd  = 0x0B; // Timer on/off
-	static const guint8  kSkaleTareKmd   = 0x0F; // UtilTare
+	#define kRescanTimeMS	99
+	#define kPeso 			2
+	#define kDifer 			4
+	#define kSkaleStable 	0xCE
+	#define kSkaleChning 	0xCA
+	#define kSkaleLEDnGrKmd 0x0A
+	#define kSkaleTimerKmd	0x0B
+	#define kSkaleTareKmd	0x0F
 
 	//
 	// Methods
 	//
-
 	static void    UtilInserta(int16_t index, int16_t Valor, std::vector<guint8>& Mensaje);
 	static void    UtilTare();
-	static int16_t UtilCurrentPesoHW();
-
 };
 #endif

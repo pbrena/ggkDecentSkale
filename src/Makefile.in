@@ -87,7 +87,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-noinst_PROGRAMS = LaunchDecent$(EXEEXT)
+noinst_PROGRAMS = LaunchDecent$(EXEEXT) SkaleCalibr$(EXEEXT) \
+	SkalePrtConfig$(EXEEXT)
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -127,6 +128,16 @@ LaunchDecent_OBJECTS = $(am_LaunchDecent_OBJECTS)
 LaunchDecent_DEPENDENCIES = libggk.a
 LaunchDecent_LINK = $(CXXLD) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_SkaleCalibr_OBJECTS = SkaleCalibr-SkaleCalibr.$(OBJEXT)
+SkaleCalibr_OBJECTS = $(am_SkaleCalibr_OBJECTS)
+SkaleCalibr_LDADD = $(LDADD)
+SkaleCalibr_LINK = $(CXXLD) $(SkaleCalibr_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_SkalePrtConfig_OBJECTS = SkalePrtConfig-SkalePrtConfig.$(OBJEXT)
+SkalePrtConfig_OBJECTS = $(am_SkalePrtConfig_OBJECTS)
+SkalePrtConfig_LDADD = $(LDADD)
+SkalePrtConfig_LINK = $(CXXLD) $(SkalePrtConfig_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -144,6 +155,8 @@ depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/LaunchDecent-LaunchDecent.Po \
 	./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po \
+	./$(DEPDIR)/SkaleCalibr-SkaleCalibr.Po \
+	./$(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Po \
 	./$(DEPDIR)/libggk_a-DBusInterface.Po \
 	./$(DEPDIR)/libggk_a-DBusMethod.Po \
 	./$(DEPDIR)/libggk_a-DBusObject.Po \
@@ -190,8 +203,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libggk_a_SOURCES) $(LaunchDecent_SOURCES)
-DIST_SOURCES = $(libggk_a_SOURCES) $(LaunchDecent_SOURCES)
+SOURCES = $(libggk_a_SOURCES) $(LaunchDecent_SOURCES) \
+	$(SkaleCalibr_SOURCES) $(SkalePrtConfig_SOURCES)
+DIST_SOURCES = $(libggk_a_SOURCES) $(LaunchDecent_SOURCES) \
+	$(SkaleCalibr_SOURCES) $(SkalePrtConfig_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -360,14 +375,22 @@ libggk_a_SOURCES = DBusInterface.cpp \
                    Utils.cpp \
                    Utils.h
 
+
 # Build our LaunchDecent Program (linking statically with libggk.a, linking dynamically with GLib)
-LaunchDecent_CXXFLAGS = -fPIC -Wall -Wextra -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+LaunchDecent_CXXFLAGS = -fPIC -Wall -Wextra  -lhx711 -llgpio -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
 LaunchDecent_SOURCES = SkaleDatServer.cpp \
                    SkaleDatServer.h \
                    LaunchDecent.cpp 
 
 LaunchDecent_LDADD = libggk.a
 LaunchDecent_LDLIBS = $(GLIB_LIBS) $(GIO_LIBS) $(GOBJECT_LIBS)
+
+# Build our Skale Calibration Program  
+SkaleCalibr_CXXFLAGS = -fPIC -Wall -Wextra  -lhx711 -llgpio -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+SkaleCalibr_SOURCES = SkaleCalibr.cpp 
+# Build our SkalePrintConfig Program  
+SkalePrtConfig_CXXFLAGS = -fPIC -Wall -Wextra  -lhx711 -llgpio -std=c++11 $(GLIB_CFLAGS) $(GIO_CFLAGS) $(GOBJECT_CFLAGS)
+SkalePrtConfig_SOURCES = SkalePrtConfig.cpp
 all: all-am
 
 .SUFFIXES:
@@ -417,6 +440,14 @@ LaunchDecent$(EXEEXT): $(LaunchDecent_OBJECTS) $(LaunchDecent_DEPENDENCIES) $(EX
 	@rm -f LaunchDecent$(EXEEXT)
 	$(AM_V_CXXLD)$(LaunchDecent_LINK) $(LaunchDecent_OBJECTS) $(LaunchDecent_LDADD) $(LIBS)
 
+SkaleCalibr$(EXEEXT): $(SkaleCalibr_OBJECTS) $(SkaleCalibr_DEPENDENCIES) $(EXTRA_SkaleCalibr_DEPENDENCIES) 
+	@rm -f SkaleCalibr$(EXEEXT)
+	$(AM_V_CXXLD)$(SkaleCalibr_LINK) $(SkaleCalibr_OBJECTS) $(SkaleCalibr_LDADD) $(LIBS)
+
+SkalePrtConfig$(EXEEXT): $(SkalePrtConfig_OBJECTS) $(SkalePrtConfig_DEPENDENCIES) $(EXTRA_SkalePrtConfig_DEPENDENCIES) 
+	@rm -f SkalePrtConfig$(EXEEXT)
+	$(AM_V_CXXLD)$(SkalePrtConfig_LINK) $(SkalePrtConfig_OBJECTS) $(SkalePrtConfig_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -425,6 +456,8 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LaunchDecent-LaunchDecent.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SkaleCalibr-SkaleCalibr.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-DBusInterface.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-DBusMethod.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libggk_a-DBusObject.Po@am__quote@ # am--include-marker
@@ -744,6 +777,34 @@ LaunchDecent-LaunchDecent.obj: LaunchDecent.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(LaunchDecent_CXXFLAGS) $(CXXFLAGS) -c -o LaunchDecent-LaunchDecent.obj `if test -f 'LaunchDecent.cpp'; then $(CYGPATH_W) 'LaunchDecent.cpp'; else $(CYGPATH_W) '$(srcdir)/LaunchDecent.cpp'; fi`
 
+SkaleCalibr-SkaleCalibr.o: SkaleCalibr.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkaleCalibr_CXXFLAGS) $(CXXFLAGS) -MT SkaleCalibr-SkaleCalibr.o -MD -MP -MF $(DEPDIR)/SkaleCalibr-SkaleCalibr.Tpo -c -o SkaleCalibr-SkaleCalibr.o `test -f 'SkaleCalibr.cpp' || echo '$(srcdir)/'`SkaleCalibr.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/SkaleCalibr-SkaleCalibr.Tpo $(DEPDIR)/SkaleCalibr-SkaleCalibr.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkaleCalibr.cpp' object='SkaleCalibr-SkaleCalibr.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkaleCalibr_CXXFLAGS) $(CXXFLAGS) -c -o SkaleCalibr-SkaleCalibr.o `test -f 'SkaleCalibr.cpp' || echo '$(srcdir)/'`SkaleCalibr.cpp
+
+SkaleCalibr-SkaleCalibr.obj: SkaleCalibr.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkaleCalibr_CXXFLAGS) $(CXXFLAGS) -MT SkaleCalibr-SkaleCalibr.obj -MD -MP -MF $(DEPDIR)/SkaleCalibr-SkaleCalibr.Tpo -c -o SkaleCalibr-SkaleCalibr.obj `if test -f 'SkaleCalibr.cpp'; then $(CYGPATH_W) 'SkaleCalibr.cpp'; else $(CYGPATH_W) '$(srcdir)/SkaleCalibr.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/SkaleCalibr-SkaleCalibr.Tpo $(DEPDIR)/SkaleCalibr-SkaleCalibr.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkaleCalibr.cpp' object='SkaleCalibr-SkaleCalibr.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkaleCalibr_CXXFLAGS) $(CXXFLAGS) -c -o SkaleCalibr-SkaleCalibr.obj `if test -f 'SkaleCalibr.cpp'; then $(CYGPATH_W) 'SkaleCalibr.cpp'; else $(CYGPATH_W) '$(srcdir)/SkaleCalibr.cpp'; fi`
+
+SkalePrtConfig-SkalePrtConfig.o: SkalePrtConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkalePrtConfig_CXXFLAGS) $(CXXFLAGS) -MT SkalePrtConfig-SkalePrtConfig.o -MD -MP -MF $(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Tpo -c -o SkalePrtConfig-SkalePrtConfig.o `test -f 'SkalePrtConfig.cpp' || echo '$(srcdir)/'`SkalePrtConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Tpo $(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkalePrtConfig.cpp' object='SkalePrtConfig-SkalePrtConfig.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkalePrtConfig_CXXFLAGS) $(CXXFLAGS) -c -o SkalePrtConfig-SkalePrtConfig.o `test -f 'SkalePrtConfig.cpp' || echo '$(srcdir)/'`SkalePrtConfig.cpp
+
+SkalePrtConfig-SkalePrtConfig.obj: SkalePrtConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkalePrtConfig_CXXFLAGS) $(CXXFLAGS) -MT SkalePrtConfig-SkalePrtConfig.obj -MD -MP -MF $(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Tpo -c -o SkalePrtConfig-SkalePrtConfig.obj `if test -f 'SkalePrtConfig.cpp'; then $(CYGPATH_W) 'SkalePrtConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/SkalePrtConfig.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Tpo $(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='SkalePrtConfig.cpp' object='SkalePrtConfig-SkalePrtConfig.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(SkalePrtConfig_CXXFLAGS) $(CXXFLAGS) -c -o SkalePrtConfig-SkalePrtConfig.obj `if test -f 'SkalePrtConfig.cpp'; then $(CYGPATH_W) 'SkalePrtConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/SkalePrtConfig.cpp'; fi`
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
 tags: tags-am
@@ -870,6 +931,8 @@ clean-am: clean-generic clean-noinstLIBRARIES clean-noinstPROGRAMS \
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/LaunchDecent-LaunchDecent.Po
 	-rm -f ./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po
+	-rm -f ./$(DEPDIR)/SkaleCalibr-SkaleCalibr.Po
+	-rm -f ./$(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusInterface.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusMethod.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusObject.Po
@@ -935,6 +998,8 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/LaunchDecent-LaunchDecent.Po
 	-rm -f ./$(DEPDIR)/LaunchDecent-SkaleDatServer.Po
+	-rm -f ./$(DEPDIR)/SkaleCalibr-SkaleCalibr.Po
+	-rm -f ./$(DEPDIR)/SkalePrtConfig-SkalePrtConfig.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusInterface.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusMethod.Po
 	-rm -f ./$(DEPDIR)/libggk_a-DBusObject.Po

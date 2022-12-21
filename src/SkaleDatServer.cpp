@@ -13,35 +13,34 @@
 // >>>  DISCUSSION
 // >>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#include <chrono>
-#include <future>
-
-// To use Logger from namespace ggk 
-#include "Logger.h"
-
-#include <thread>
-#include <mutex>
 
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"
+#include "Logger.h" // To use Logger from namespace ggk 
 
-// Logger from namespace ggk 
 using ggk::Logger;
+using std::chrono::seconds;
 
-std::mutex Skale::SkaleMutex; // explicit intiialization might be needed
+//
+// Class for Weight Cell Electronics PCB hx711
+//
+using std::chrono::seconds;
+
+
+//
 // Variable Declarations
-bool    Skale::BanderaCiclo;  // bandera para mantener ciclo continuo
-int16_t Skale::PesoRaw;       // Grams * 10
-int16_t Skale::PesoConTara;
-int16_t Skale::OffsetPaTara;
-int16_t Skale::DiferenciaPeso;
-bool    Skale::LedOn;
-bool    Skale::GramsOn;
-bool    Skale::TimerOn;
-// 0-1o          1-2o            2-Peso       4-Dif         6-xor  
-// INICIAL:
-// 03=DecentMark CE=weightstable x0000=weight x0000=Change cd=XorValidation
-std::vector<guint8> Skale::MessagePckt; 
+//
+HX711::AdvancedHX711* 	Skale::chipHx711;  // Interface with external electronic chip
+std::mutex 				Skale::SkaleMutex;
+bool    				Skale::BanderaCiclo;  
+int16_t					Skale::PesoRaw;       // Grams * 10
+int16_t					Skale::PesoConTara;
+int16_t					Skale::OffsetPaTara;
+int16_t 				Skale::DiferenciaPeso;
+bool					Skale::LedOn;
+bool					Skale::GramsOn;
+bool					Skale::TimerOn;
+std::vector<guint8>		Skale::MessagePckt; 
 
 //
 // Variables Temporales ojo no estan en la clase Skale
@@ -49,19 +48,18 @@ std::vector<guint8> Skale::MessagePckt;
 std::vector<guint8> TmpPckt; 
 guint8              TmpXor; // Ojo hay otra parecida en el Scope de Cont
 
-// Our Continous thread Updates Skale (Data Server) information
-std::thread Skale::contThread;
-
 //
 // Methods Defined as Public in =.h
 //
+
+std::thread Skale::contThread; // Our Continous thread
+
 // If the thread is already running, this method will fail
 // Note that it shouldn't be necessary to connect manually; 
 // Returns true if the Skale thread initiates otherwise false
 bool Skale::start()
 {
 	// If the thread is already running, return failure
-	// No parece Jalar ????
 	if (contThread.joinable())
 		{ return false; }
 
@@ -205,12 +203,10 @@ void Skale::runContThread()
 {
 	Logger::trace("Entering the Skale runCont Thread");
 
- // Tempo: Iniciar Numeros Aleatorios
-	srand(time(NULL));
  //
  // Class Variables initialization Only event for the Singleton
  //
-	BanderaCiclo   = true;        // bandera para mantener ciclo continuo
+	BanderaCiclo   = true;        // Ojo para mantener ciclo continuo
 	PesoRaw        = 0x0000;      // Grams * 10
 	PesoConTara    = 0x0000;
 	OffsetPaTara   = 0x0000;
@@ -227,14 +223,59 @@ void Skale::runContThread()
 	int16_t TmpContNvoRaw;   
 	guint8  TmpContXor;
 	bool    TmpContBandera = true;    // Continua ciclo? Inicialmente SI
+ 
+ // Read Calibradion Data from Config file.
+    std::ifstream ConfigFile;
+	HX711::Value zeroParm = 0;
+	HX711::Value refParm  = 0;
+    ConfigFile.open("/home/awiwi/.decentskaleconfig", std::ios::in | std::ios::binary); 
+    if  (ConfigFile.fail())  {
+        Logger::error("runCont Thread: NO CONFIG FILE. Run Calibration: ./src/SkaleCalibr.");
+        return;
+	}
+    ConfigFile.read((char *) &zeroParm, sizeof(zeroParm));
+    ConfigFile.read((char *) &refParm,  sizeof(refParm  ));
+	ConfigFile.close();
 
-	while (TmpContBandera) // Semi Continuo  OJO <---- No todas las actualizaciones se envian al Cliente
+	if  ( 0 == zeroParm)  {
+		Logger::error("runCont Thread: SKALE MUST NEED CALIBRATION, Run command ./src/SkaleCalibr");
+        return;
+	}
+
+ // Construct an AdvancedHX711 object according with GPIO phisical wired pins and 
+ // chip electronics, if communication test fails, terminates execution.
+    try {   chipHx711  = new HX711::AdvancedHX711(
+									hwdataPin,
+									hwclockPin, 
+									refParm,      // de Calibracion
+									zeroParm,
+									hwchipRate ); // de Electronica
+    }
+    catch(const HX711::GpioException& ex) {
+		Logger::error("runCont Thread: FATAL! GpioException connecting to HX711");
+        return;
+    }
+    catch(const HX711::TimeoutException& ex) {
+		Logger::error("runCont Thread: FATAL! Timedout connecting to HX711");
+        return;
+    }
+	
+	// ELSE: loop Continuo hasta que el HW este listo
+	while ( ! chipHx711->isReady() ) { 
+		chipHx711->powerUp(); 
+		std::this_thread::sleep_for(std::chrono::milliseconds(kRescanTimeMS));
+		Logger::error("runCont Thread: HX711 not ready! Retrying...");
+		}
+
+	// ELSE: loop Continuo hasta que la badera sea actualizada por stop()
+	while (TmpContBandera) 
 	{
 	 // Pace the cicles  
 		std::this_thread::sleep_for(std::chrono::milliseconds(kRescanTimeMS));
 
-	 // Para no alargar el bloqueo se lee en Var temporal
-		TmpContNvoRaw = Skale::UtilCurrentPesoHW(); 
+	 // Para no alargar el bloqueo se lee en Var temporal, 
+	 //                                 1a sola muestra (en gr)  then -> tenths of gr
+		TmpContNvoRaw = chipHx711->weight(just1Sample).getValue() * 10 ;
 
 		if ( true )    // Solo para limitar scope
 		{
@@ -268,10 +309,15 @@ void Skale::runContThread()
 			PesoRaw 		= TmpContNvoRaw; 
 			   
 		}   // Termino del scope libera SkaleMutex
-		// Notify --- Cada PERIODO haya o no cambios la Caracteristica se encargara de pedir
-		// El Mensaje nosotros solo notificamos el paso del tiempo
+		
+		// NotifyUpdated <-- Cada Ciclo haya o no cambios.
+		// Como respuesta la caracteristica (ReadNotify) se encargara de pedir
+		// a traves del dataGetter el nuevo mensaje. Realmente solo se notifica 
+		// el paso del tiempo pues el peso (y por tanto el mensaje) puede variar
+		// o no.
 		if (0 == ggkNofifyUpdatedCharacteristic("/com/decentscale/decentscale/ReadNotify"))
 			{ Logger::error("runCont Thread: Fallo ggkNofifyUpdatedCharacteristic"); }
+			
 	}
 	Logger::trace("Leaving the Skale runCont Thread");
 }
@@ -332,11 +378,11 @@ void Skale::UtilTare()
 	Logger::trace("Util Tare Unlock Skale Mutex");
 }
 
-int16_t Skale::UtilCurrentPesoHW()
-{
- // NO Logger --- Se llama cada decima de segundo  
- // int16_t TmpLeePesoRaw =  0xabcd;
- // Tempo: Numeros Aleatorios
- // INT16_MAX es "Macro constants"
-	return  rand() % INT16_MAX;
-}
+// int16_t Skale::UtilCurrentPesoHW()
+// {
+//  // NO Logger --- Se llama cada decima de segundo  
+//  // int16_t TmpLeePesoRaw =  0xabcd;
+//  // Tempo: Numeros Aleatorios
+//  // INT16_MAX es "Macro constants"
+// 	return  rand() % INT16_MAX;
+// }

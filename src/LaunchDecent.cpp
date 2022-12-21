@@ -19,10 +19,7 @@
 // >>
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#include <signal.h>
-#include <iostream>
-#include <thread>
-#include <sstream>
+#include <signal.h>  // To handle Cntrl-C for example
 
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"

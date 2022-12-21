@@ -1,4 +1,4 @@
-AC_INIT([ggk], [1.0])
+AC_INIT([DecentSkale], [1.0])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
