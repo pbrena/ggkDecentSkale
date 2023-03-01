@@ -42,8 +42,7 @@ std::vector<guint8> KomndCharVectorBuffr;
 // Logging
 //
 
-enum LogLevel
-{
+enum LogLevel {
 	Debug,
 	Verbose,
 	Normal,
@@ -70,8 +69,7 @@ void LogTrace(const char *pText) { std::cout << "-Trace-: " << pText << std::end
 //
 
 // We setup a couple Unix signals to perform graceful shutdown in the case of SIGTERM or get an SIGING (CTRL-C)
-void signalHandler(int signum)
-{
+void signalHandler(int signum) {
 	switch (signum)
 	{
 		case SIGINT:
@@ -94,18 +92,15 @@ void signalHandler(int signum)
 // This method conforms to `GGKServerDataGetter` and is passed to the server via our call to `ggkStart()`.
 //
 // The server calls this method from its own thread, so we must ensure our implementation is thread-safe. 
-const void *dataGetter(const char *pName)
-{
-	if (nullptr == pName)
-	{
+const void *dataGetter(const char *pName) {
+	if (nullptr == pName) {
 		LogError("NULL name sent to server data getter");
 		return nullptr;
 	}
 
 	std::string strName = pName;
 
-	if ( strName == "ReadNotify" )
-	{
+	if ( strName == "ReadNotify" ) {
 	 // Erases all previous Buffer contens
 		DataServCharVectorBuffr.clear();
 	 // Copia el contenido de la respuesta de Skale al buffer de datos
@@ -116,9 +111,9 @@ const void *dataGetter(const char *pName)
 		return &DataServCharVectorBuffr;
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
-	{ LogError("Warning Data getter: Write caller requested Data, Null send"); }
+		{ LogError("Warning Data getter: Write caller requested Data, Null send"); }
 	else  
-	{ LogError((std::string("Data getter, wrong caller name: '") + strName + "'").c_str()); }
+		{ LogError((std::string("Data getter, wrong caller name: '") + strName + "'").c_str()); }
 
 	return nullptr;
 }
@@ -127,43 +122,37 @@ const void *dataGetter(const char *pName)
 // This method conforms to `GGKServerDataSetter` and is passed to the server via our call to `ggkStart()`.
 //
 // The server calls this method from its own thread, so we must ensure our implementation is thread-safe. 
-int dataSetter(const char *pName, const void *pData)
-{
-	if (nullptr == pName)
-	{
+int dataSetter(const char *pName, const void *pData) {
+	if (nullptr == pName) {
 		LogError("NULL name sent to server data setter");
 		return 0;
 	}
-	if (nullptr == pData)
-	{
+	if (nullptr == pData) {
 		LogError("NULL pData sent to server data setter");
 		return 0;
 	}
 
 	std::string strName = pName;
 
-	if ( strName == "ReadNotify" )
-	{
+	if ( strName == "ReadNotify" ) {
 		LogError("Warning: ReadNotify caller requested to write Data"); 
 		return 0;
 	}
-	else if ( strName == "WriteWoResp" || strName ==  "WriteBack")
-	{ 
+	else if ( strName == "WriteWoResp" || strName ==  "WriteBack") { 
 		// Erases all previous Buffer contens
 		KomndCharVectorBuffr.clear();
 		// Aqui parace resolver el valor enviado (vector) por el write a partir del apuntador
 		KomndCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
 		 // Ojo llama al procesador de comandos que es boolano
-		if ( !Skale::getInstance().ProcesKmd(KomndCharVectorBuffr) )
-			{ 
-				LogError("Warning: ProcesKmd -> false, fallo"); 
-				return 0; 
-			} 
+		if ( !Skale::getInstance().ProcesKmd(KomndCharVectorBuffr) ) { 
+			LogError("Warning: ProcesKmd -> false, fallo"); 
+			return 0; 
+		} 
 		LogDebug((std::string("Server data: komand vector received")).c_str());
 		return 1;
 	}
 	else  
-	{ LogError((std::string("Wrong caller name sent to server data setter: '") + strName + "'").c_str());  }
+		{ LogError((std::string("Wrong caller name sent to server data setter: '") + strName + "'").c_str()); }
 
 	LogWarn((std::string("Unknown name for server data setter request: '") + pName + "'").c_str());
 	return 0;
@@ -172,26 +161,21 @@ int dataSetter(const char *pName, const void *pData)
 //
 // Entry point
 //
-int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
-{
+int main(int argc, char **ppArgv) {   // Arrmts count #, Actual String Arguments
+
 	// A basic command-line parser
-	for (int i = 1; i < argc; ++i)
-	{
+	for (int i = 1; i < argc; ++i) {
 		std::string arg = ppArgv[i];
-		if (arg == "-q")
-		{
+		if (arg == "-q") {
 			logLevel = ErrorsOnly;
 		}
-		else if (arg == "-v")
-		{
+		else if (arg == "-v") {
 			logLevel = Verbose;
 		}
-		else if  (arg == "-d")
-		{
+		else if (arg == "-d") {
 			logLevel = Debug;
 		}
-		else
-		{
+		else {
 			LogFatal((std::string("Unknown parameter: '") + arg + "'").c_str());
 			LogFatal("");
 			LogFatal("Usage: LaunchDecent [-q | -v | -d]");
@@ -224,24 +208,18 @@ int main(int argc, char **ppArgv) // Arrmts count #, Actual String Arguments
 	//
 	// The so called (Gatt) Server  (different from Data Server)
 	if (!ggkStart("decentscale", "Decent Scale", "Decent Scale", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
-	{
-		return -1;
-	}
+		{ return -1; }
 	// Other Stuff can be executed while Wait for the servers shutdown process
 	
 	// Start the (Skale) Data server Continous process in its own Thread
 	if (!Skale::getInstance().start())
-	{
-		return -1;
-	}
+		{ return -1; }
 	// Wait for the server to come to a complete stop (CTRL-C from the command line)
-	if (!ggkWait())
-	{
+	if (!ggkWait()) {
 		return -1;
 	}	
 	// Stop Data Server
-	if (!Skale::getInstance().stop())
-	{
+	if (!Skale::getInstance().stop()) {
 		return -1;
 	}
 	// Return the final server health status as a success (0) or error (-1)

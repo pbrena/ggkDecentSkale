@@ -35,14 +35,13 @@ double       knownWeight;
 Value        zeroValue;
 SimpleHX711* tmphxChip;
 
-int main() 
-{
+int main() {
     try { tmphxChip = new SimpleHX711( 
-							hwdataPin,   // hw <- Constantes del Alambreado y de la Electronica  
-							hwclockPin,  
+							HWDATAPIN,   // hw <- Constantes del Alambreado y de la Electronica  
+							hWCLOKPIN,  
 			                	1,       // Numeros iniciales, requeridos para determinar los
     				            0,       // valores reales a traves el proceso de cßalibracion
-    						hwchipRate );              
+    						HWCHIPRATE );              
     }
     catch(const GpioException& ex) {
         cerr << "Failed to connect to HX711 chip" << endl;
@@ -52,12 +51,9 @@ int main()
         cerr << "Failed to connect to HX711 chip" << endl;
         return EXIT_FAILURE;
     }
-    
-    //clear screen
-    cout    << "\x1B[2J\x1B[H"
-    
-    //splash
-            << "========================================" << endl
+
+    cout    << "\x1B[2J\x1B[H"                                     //clear screen
+            << "========================================" << endl  //splash
             << "HX711 Chip Calibration" << endl
             << "========================================"
             << endl << endl

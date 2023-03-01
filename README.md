@@ -20,7 +20,7 @@ Original Build with -->>
 
 It ran only after the following Commands were successfull 
 
-cd gobbledegook && autoreconf -f -i
+cd ggkDecentSkale && autoreconf -f -i
 
 Other ReCompile comand sequence
 
@@ -28,8 +28,10 @@ Other ReCompile comand sequence
 	make distclean
 	autoreconf -f -i
 	./configure
-	make
+	make 
 
+To use Distcc
+	pump make
 
 During development:
 

@@ -46,12 +46,11 @@ public:
 	static bool stop();
 
  // Used as the Data Getter/Setter by the Servers' "Linker": LaunchDecent.cpp
-	static std::vector<guint8> &CurrentPacket ();
-	static bool                 ProcesKmd     (std::vector<guint8>& SkaleKmd);
+	static std::vector<guint8> CurrentPacket();
+	static bool                ProcesKmd    (std::vector<guint8>& SkaleKmd);
 
  // Returns the instance to this singleton class Ojo: Solo en =.h
-	static Skale &getInstance()
-	{
+	static Skale &getInstance() {
 		static Skale instance;
 		return instance;
 	}
@@ -91,24 +90,27 @@ private: // Practicamente todo
 	//
 	// Constants (tokens)
 	//
-	#define hwdataPin	2	// hw - Info for the use of the externam Electronic Chip hx711
-	#define hwclockPin	3	// pins - GPIO
-	#define just1Sample	1 	// hx711  parms
-	#define hwchipRate	HX711::Rate::HZ_80 
 
-	#define kRescanTimeMS	99
-	#define kPeso 			2
-	#define kDifer 			4
-	#define kSkaleStable 	0xCE
-	#define kSkaleChning 	0xCA
-	#define kSkaleLEDnGrKmd 0x0A
-	#define kSkaleTimerKmd	0x0B
-	#define kSkaleTareKmd	0x0F
+	// hw - Info for the use of the externam Electronic Chip hx711
+	#define HWDATAPIN		2	
+	#define hWCLOKPIN		3	// pins - GPIO
+	#define just1SAMPLE		1 	// hx711  parms
+	#define HWCHIPRATE		HX711::Rate::HZ_80 
+
+	#define RESCANTIMEMS	99
+	#define PESO 			2
+	#define DIFERENCIA 		4
+	#define SKALESTABLE 	0xCE
+	#define SKALECHNING 	0xCA
+	#define SKALELEDyGRKMD  0x0A
+	#define SKALETIMERKMD	0x0B
+	#define SKALETAREKMD	0x0F
 
 	//
 	// Methods
 	//
-	static void    UtilInserta(int16_t index, int16_t Valor, std::vector<guint8>& Mensaje);
-	static void    UtilTare();
+	static void UtilTare();
+	static guint8 calcXor(std::vector<guint8> vector);										\
+
 };
 #endif
