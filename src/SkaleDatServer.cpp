@@ -7,69 +7,51 @@
 // >>>  INSIDE THIS FILE
 // >>
 //
-// This is the Scale Controler
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// >>
-// >>>  DISCUSSION
-// >>
+// This is the Scale Controler Logic
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"
 #include "Logger.h" // To use Logger from namespace ggk 
 
-#define _injctvalNvect(_index, _Valor, _Vector)									\
+#define _injctvalNvect(_index, _Valor, _Vector)								\
 {																			\
-	_Vector[_index  ] =  static_cast<guint8> ( ( 0xFF00 & _Valor ) >> 8);		\
-	_Vector[_index+1] =  static_cast<guint8>   ( 0x00FF & _Valor )      ;		\
+	_Vector[_index  ] =  static_cast<guint8> ( ( 0xFF00 & _Valor ) >> 8);	\
+	_Vector[_index+1] =  static_cast<guint8>   ( 0x00FF & _Valor )      ;	\
 }
 
 using ggk::Logger;
 using std::chrono::seconds;
 
 //
-// Class for Weight Cell Electronics PCB hx711
-//
-using std::chrono::seconds;
-
-//
 // Variable Declarations
-//
-HX711::AdvancedHX711* 	Skale::chipHx711;  // Interface with external electronic chip
-std::mutex 				Skale::SkaleMutex;
-bool    				Skale::BanderaCiclo;  
-int16_t					Skale::PesoRaw;       // Grams * 10
-int16_t					Skale::PesoConTara;
-int16_t					Skale::OffsetPaTara;
-int16_t 				Skale::DiferenciaPeso;
-bool					Skale::LedOn;
-bool					Skale::GramsOn;
-bool					Skale::TimerOn;
-std::vector<guint8>		Skale::MessagePckt; 
+// 
+std::vector<guint8> 	Scale::TmpPckt; 	// Variables Temporales
+std::thread 			Scale::ContinousTask; 	// Our Continous thread
 
-//
-// Variables Temporales ojo no estan en la clase Skale
-//
-
-std::vector<guint8> TmpPckt; 
-
-//
-// Methods Defined as Public in =.h
-//
-
-std::thread Skale::contThread; // Our Continous thread
+HX711::AdvancedHX711* 	Scale::chipHx711;		// Interface with external electronic chip
+std::mutex				Scale::Mutex;			// Used for Thread-safety <<<---
+bool					Scale::BanderaCiclo;	// bandera para terminar ciclo continuo
+int16_t					Scale::PesoRaw;			// Grams * 10
+int16_t					Scale::PesoConTara;
+int16_t					Scale::OffsetPaTara;
+int16_t					Scale::DiferenciaPeso;
+uint8_t					Scale::WeightStable;
+bool					Scale::LedOn;
+bool					Scale::GramsOn;
+bool					Scale::TimerOn;
+std::vector<guint8> 	Scale::MessagePckt;
 
 // If the thread is already running, this method will fail
 // Note that it shouldn't be necessary to connect manually; 
 // Returns true if the Skale thread initiates otherwise false
-bool Skale::start() {
+bool  Scale::start() {
 	// If the thread is already running, return failure
-	if (contThread.joinable())
+	if (Scale::ContinousTask.joinable())
 		{ return false; }
-
 	// otherwise Create a thread 
 	try {
-		contThread = std::thread(runContThread);
+		Scale::ContinousTask = std::thread(Scale::runContThread);
 	}
 	catch(std::system_error &ex) {
 		Logger::error(SSTR << "Skale thread was unable to start (code " << ex.code() << "): " << ex.what());
@@ -80,19 +62,19 @@ bool Skale::start() {
 }
 
 // This method will block until the SkaleCont thread joins
-bool Skale::stop() {
-	 {  // StartScope
+bool  Scale::stop() {
+	{  // StartScope
 		// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-		std::lock_guard<std::mutex> lk(SkaleMutex); 
+		std::lock_guard<std::mutex> lk(Scale::Mutex); 
 		Logger::trace("Skale Stop locks Skale Mutex to Udate");
-		BanderaCiclo = false; // bandera para terminar ciclo
+		Scale::BanderaCiclo = false; // bandera para terminar ciclo
 		Logger::trace("Skale Stop realeses Skale Mutex");
 	} // EndofScope
 	Logger::trace("Skale waiting for thread termination");
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	try {
-		if (contThread.joinable()) {
-			contThread.join();
+		if (Scale::ContinousTask.joinable()) {
+			Scale::ContinousTask.join();
 			Logger::trace("Cont Thread has stopped");
 		}
 		else {
@@ -101,10 +83,10 @@ bool Skale::stop() {
 	}
 	catch(std::system_error &ex) {
 		if (ex.code() == std::errc::invalid_argument) {
-			Logger::warn(SSTR << "Skale ContThread thread was not joinable (invalid Arg) during stop(): " << ex.what());
+			Logger::warn(SSTR << "Skale ContinousTask thread was not joinable (invalid Arg) during stop(): " << ex.what());
 		}
 		else if (ex.code() == std::errc::no_such_process) {
-			Logger::warn(SSTR << "Skale ContThread:  NO SUCH PROCESS" << ex.what());
+			Logger::warn(SSTR << "Skale ContinousTask:  NO SUCH PROCESS" << ex.what());
 		}
 		else if (ex.code() == std::errc::resource_deadlock_would_occur) {
 			Logger::warn(SSTR << "Deadlock avoided in call to stop() (did the event thread try to stop itself?): " << ex.what());
@@ -118,62 +100,47 @@ bool Skale::stop() {
 	Logger::trace("Skale Stop Realeses Skale Mutex");
 }
 
-// Ojo: puede ser llamado hasta cada 1/10 de seg. This method uses the RETURN by reference 
-// notation. BEWARE not to return the reference of a local variable declared in the function 
-// itself because it leads to a dangling reference.
-// std::vector<guint8> &Skale::CurrentPacket() {
-//  // NOT a local variable 
-// 	TmpPckt.clear();
-//  // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-// 	std::lock_guard<std::mutex> lk(SkaleMutex); 
-//  // el MessagePckt se actualiza continuamente, es por eso que se copia a Mensaje Temporal
-//  // de forma "Thread Safe"
-// 	TmpPckt = MessagePckt; 
-//  // NOT a local variable 
-// 	return TmpPckt; 
-// }
-std::vector<guint8> Skale::CurrentPacket() {
+std::vector<guint8> Scale::CurrentPacket() {
 	static std::vector<guint8> TmpVect;
 	TmpVect.clear();
- // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-	std::lock_guard<std::mutex> lk(SkaleMutex); 
- // el MessagePckt se actualiza continuamente, es por eso que se copia a Mensaje Temporal
- // de forma "Thread Safe"
-	TmpVect = MessagePckt; 
+	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
+	std::lock_guard<std::mutex> lk(Scale::Mutex); 
+	// el MessagePckt se actualiza continuamente, es por eso que se copia a Mensaje Temporal
+	// de forma "Thread Safe"
+	TmpVect = Scale::MessagePckt; 
 	return(TmpVect);
 }
 
 // Ojo: en este otro ejemplo como que se pasa apuntador tambien (pero de otra forma
 // diferente a "by Reference" creo se copia el apuntador
 // bool Skale::ProcesKmd(const std::vector<guint8> &SkaleKmd)
-
 // Optaremos por: by Reference: use & example:  vector<"type">& Parm
-bool Skale::ProcesKmd( std::vector<guint8>& SkaleKmd ) {
- // Verify Parity
-	if  ( SkaleKmd[6] != calcXor(SkaleKmd) ) {    // command corrupted
+bool  Scale::ProcesKmd( std::vector<guint8>&  SkaleKmd ) {
+	// Verify Parity
+	if  ( SkaleKmd[6] != Scale::calcXor(SkaleKmd) ) {    // command corrupted
 		Logger::trace("Skale ProcKmd: Kmd Wrong Parity");
 		return false;                 // command corrupted --> Abort
 	}    
- // Otherwise... process
-	if 			( SkaleKmd[1] == SKALETAREKMD   ) {		//UtilTare
-		Skale::UtilTare(); // already Thread Safe
+	// Otherwise... process
+	if 			( SkaleKmd[1] == SKALETAREKMD   ) {
+		Scale::UtilTare(); // already Thread Safe
 	} else if	( SkaleKmd[1] == SKALELEDyGRKMD ) {		//LED & Grams
-	 // StartofScope
-	 // Null Action really for now
-	 // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
+		// StartofScope
+		// Null Action really for now
+		// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
 		Logger::trace("ProcesKmd locks Skale Mutex to update LED & Gram");
-		std::lock_guard<std::mutex> lk(SkaleMutex); 
-		LedOn   = true;
-		GramsOn = true;
+		std::lock_guard<std::mutex> lk(Scale::Mutex); 
+		Scale::LedOn   = true;
+		Scale::GramsOn = true;
 		Logger::trace("ProcesKmd releases Skale Mutex LED & Gram");
-	 // EndofScope  
+		// EndofScope  
 	} else if	( SkaleKmd[1] == SKALETIMERKMD  ) {		//Timer 
-	 // StartofScope
+		// StartofScope
 		Logger::trace("ProcesKmd locks Skale Mutex to update Timer");
-		std::lock_guard<std::mutex> lk(SkaleMutex); 
-		TimerOn = true;
+		std::lock_guard<std::mutex> lk(Scale::Mutex); 
+		Scale::TimerOn = true;
 		Logger::trace("ProcesKmd releses Skale Mutex to update Timer");
-	 // EndofScope  
+		// EndofScope  
 	} else { // command corrupted --> Abort 
 		Logger::trace("ProcesKmd: Kmd Wrong kmd");
 		return false;
@@ -181,191 +148,133 @@ bool Skale::ProcesKmd( std::vector<guint8>& SkaleKmd ) {
 	return true;
 }
 
-//
-// Methods Defined as Private? in =.h
-//
-
-// Our thread interface, which simply launches our the thread processor on our Skale instance
-// Based in example of HciAdapter Singleton
-void runContThread() {
-	Skale::getInstance().runContThread();
-}
-
 // This mehtod should not be called directly. Rather, it is referenced with start/stop methods
 // it runs continuously on its own thread until the data server shuts down
-void Skale::runContThread() {
+void  Scale::runContThread() {
 
 	Logger::trace("Entering the Skale runCont Thread");
-
- //
- // Class Variables initialization Only event for the Singleton
- //
-	BanderaCiclo   = true;        // Ojo para mantener ciclo continuo
-	PesoRaw        = 0x0000;      // Grams * 10
-	PesoConTara    = 0x0000;
-	OffsetPaTara   = 0x0000;
-	DiferenciaPeso = 0x0000;
-	LedOn          = false;
-	GramsOn        = true;
-	TimerOn        = false;
+	
+	Scale::BanderaCiclo   = true;        // Ojo para mantener ciclo continuo
+	Scale::PesoRaw        = 0x0000;      // Grams * 10
+	Scale::PesoConTara    = 0x0000;
+	Scale::OffsetPaTara   = 0x0000;
+	Scale::DiferenciaPeso = 0x0000;
+	Scale::LedOn          = false;
+	Scale::GramsOn        = true;
+	Scale::TimerOn        = false;
 	// It really is a fixed size array so the shrink_to_fit, vectors used just to follow D-Bus formats
 	//                0-1o 1-2o 2-Peso    4-Dif     6-xor    
-	MessagePckt    = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 	MessagePckt.shrink_to_fit();
-	TmpPckt        = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; 	TmpPckt.shrink_to_fit();
+	Scale::MessagePckt    = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; Scale::MessagePckt.shrink_to_fit();	
+	Scale::TmpPckt        = {0x03,0xCE,0x00,0x00,0x00,0x00,0xCD}; Scale::TmpPckt.shrink_to_fit();	
 
- // Methods (Cont) Local Vars
+	// Local Vars
 	int16_t TmpContNvoRaw;   
 	bool    TmpContBandera = true;    // Continua ciclo? Inicialmente SI
- 
- // Read Calibradion Data from Config file.
-    std::ifstream ConfigFile;
-	HX711::Value zeroParm = 0;
-	HX711::Value refParm  = 0;
-    ConfigFile.open("/home/awiwi/.decentskaleconfig", std::ios::in | std::ios::binary); 
-    if  (ConfigFile.fail())  {
-        Logger::error("runCont Thread: NO CONFIG FILE. Run Calibration: ./src/SkaleCalibr.");
-        return;
+
+	// Read Calibradion Data from Config file.
+	std::ifstream ConfigFile;
+	HX711::Value  zeroParm = 0;
+	HX711::Value  refParm  = 0;
+	ConfigFile.open("/home/awiwi/.decentskaleconfig", std::ios::in | std::ios::binary); 
+	if  (ConfigFile.fail()) {
+		Logger::error("runCont Thread: NO CONFIG FILE. Run Calibration: ./src/SkaleCalibr.");
+		return;
 	}
-    ConfigFile.read((char *) &zeroParm, sizeof(zeroParm));
-    ConfigFile.read((char *) &refParm,  sizeof(refParm  ));
+	ConfigFile.read((char *) &zeroParm, sizeof(zeroParm));
+	ConfigFile.read((char *) &refParm,  sizeof(refParm  ));
 	ConfigFile.close();
 
-	if  ( 0 == zeroParm)  {
+	if  ( 0 == zeroParm) {
 		Logger::error("runCont Thread: SKALE MUST NEED CALIBRATION, Run command ./src/SkaleCalibr");
-        return;
+		return;
 	}
 
- // Construct an AdvancedHX711 object according with GPIO phisical wired pins and 
- // chip electronics, if communication test fails, terminates execution.
-    try {   chipHx711  = new HX711::AdvancedHX711(
+	// Construct an AdvancedHX711 object according with GPIO phisical wired pins and 
+	// chip electronics, if communication test fails, terminates execution.
+	try { Scale::chipHx711  = new HX711::AdvancedHX711(
 									HWDATAPIN,
-									hWCLOKPIN, 
+									HWCLOKPIN, 
 									refParm,      // de Calibracion
 									zeroParm,
 									HWCHIPRATE ); // de Electronica
-    }
-    catch(const HX711::GpioException& ex) {
+	}
+	catch(const HX711::GpioException& ex) {
 		Logger::error("runCont Thread: FATAL! GpioException connecting to HX711");
-        return;
-    }
-    catch(const HX711::TimeoutException& ex) {
+		return;
+	}
+	catch(const HX711::TimeoutException& ex) {
 		Logger::error("runCont Thread: FATAL! Timedout connecting to HX711");
-        return;
-    }
-	
+		return;
+	}
 	// ELSE: loop Continuo hasta que el HW este listo
-	while ( ! chipHx711->isReady() ) { 
-		chipHx711->powerUp(); 
+	while ( !Scale::chipHx711->isReady() ) { 
+		Scale::chipHx711->powerUp(); 
 		std::this_thread::sleep_for(std::chrono::milliseconds(RESCANTIMEMS));
 		Logger::error("runCont Thread: HX711 not ready! Retrying...");
-		}
-
-	// ELSE: loop Continuo hasta que la badera sea actualizada por stop()
+	}
+	// ELSE: loop Continuo hasta que la bandera sea actualizada por stop()
 	while (TmpContBandera) {
-
-	 // Pace the cicles  
+		// Pace the cicles  
 		std::this_thread::sleep_for(std::chrono::milliseconds(RESCANTIMEMS));
-
-	 // Para no alargar el bloqueo se lee en Var temporal, 
-	 //                                 1a sola muestra (en gr)  then -> tenths of gr
-		TmpContNvoRaw = chipHx711->weight(just1SAMPLE).getValue() * 10 ;
-
+		// Para no alargar el bloqueo se lee en Var temporal, 
+		//                               1a sola muestra (en gr)  then -> tenths of gr
+		TmpContNvoRaw = Scale::chipHx711->weight(just1SAMPLE).getValue() * 10 ;
 		{ // StartofScope
-			std::lock_guard<std::mutex> lk(SkaleMutex); 
-		 // Segnalara el fin del ciclo al cambiar la Bandera Global, 
-		 // Modificado por .stop()
-		 	TmpContBandera = BanderaCiclo;
-		 // 2o. Byte
-			if ( TmpContNvoRaw == PesoRaw ) 
-			   { MessagePckt[1] = SKALESTABLE; } // Es estable...
+			std::lock_guard<std::mutex> lk(Scale::Mutex); 
+			// Segnalara el fin del ciclo al cambiar la Bandera Global, 
+			// Modificado por .stop()
+			TmpContBandera =  Scale::BanderaCiclo;
+			// 2o. Byte
+			if ( TmpContNvoRaw ==  Scale::PesoRaw ) 
+				{ Scale::MessagePckt[1] = SKALESTABLE; } // Es estable...
 			else 
-			   { MessagePckt[1] = SKALECHNING; } // Es inestable
-			
-			PesoConTara     = TmpContNvoRaw - OffsetPaTara;
-			DiferenciaPeso  = TmpContNvoRaw - PesoRaw; 
-		 // 3o. y 4o. Byte Peso
-			_injctvalNvect(PESO,       PesoConTara,    MessagePckt);   
-		 // 5o. y 6o. Byte Peso
-			_injctvalNvect(DIFERENCIA, DiferenciaPeso, MessagePckt);	
-		 // 7o. Byte - Actualizar byte de paridad
-			MessagePckt[6] = calcXor(MessagePckt);
-		 // Recordar estado actual...
-			PesoRaw 		= TmpContNvoRaw; 
+				{ Scale::MessagePckt[1] = SKALECHNING; } // Es inestable
+			Scale::PesoConTara     = TmpContNvoRaw -  Scale::OffsetPaTara;
+			Scale::DiferenciaPeso  = TmpContNvoRaw -  Scale::PesoRaw; 
+			// 3o. y 4o. Byte Peso
+			_injctvalNvect(PESO,        Scale::PesoConTara,     Scale::MessagePckt);   
+			// 5o. y 6o. Byte Peso
+			_injctvalNvect(DIFERENCIA,  Scale::DiferenciaPeso,  Scale::MessagePckt);	
+			// 7o. Byte - Actualizar byte de paridad
+			Scale::MessagePckt[6] = Scale::calcXor(Scale::MessagePckt);
+			// Recordar estado actual...
+			Scale::PesoRaw 		= TmpContNvoRaw; 
 		} // EndofScope
-		
 		// NotifyUpdated <-- Cada Ciclo haya o no cambios.
 		// Como respuesta la caracteristica (ReadNotify) se encargara de pedir
 		// a traves del dataGetter el nuevo mensaje. Realmente solo se notifica 
 		// el paso del tiempo pues el peso (y por tanto el mensaje) puede variar
 		// o no.
 		if (0 == ggkNofifyUpdatedCharacteristic("/com/decentscale/decentscale/ReadNotify"))
-		   { Logger::error("runCont Thread: Fallo ggkNofifyUpdatedCharacteristic"); }
+		{ Logger::error("runCont Thread: Fallo ggkNofifyUpdatedCharacteristic"); }
 	}
 	Logger::trace("Leaving the Skale runCont Thread");
 }
 
-// OOOOJo: There are two ways to pass a vector to a function:
-// 				Pass By value
-// 				Pass By Reference
-// When passed by value, a copy of the vector is created. This new copy of the vector
-// is then used in the function and thus, any changes made to the vector in the function 
-// do not affect the original vector.
-// So to modify -- by Reference: use & example:  vector<"type">& Parm
-// Se opta por usar variable global quitando Mensaje de parametros
-// void Skale::insertaNmensaje(int16_t index, int16_t Valor) {
-
-//  // Uno de los problemas fue no poner guint8 en static_cast, era Char o uint8? 
-// 	MessagePckt[index]   =  static_cast<guint8> ( ( 0xFF00 & Valor ) >> 8);
-// 	MessagePckt[index+1] =  static_cast<guint8>   ( 0x00FF & Valor )      ;
- // Otro problema: Parentesis, los que siguen al static_cast<guint8>
- // & "and" using this mask to clear out (some) 8 bits
-
-	/* Ejemplo elegante pero depende de Big/Little Endianess
-	union ByteSplit
-	{
-		int16_t Entero;
-		guint8  Partido[2];
-	};
-	ByteSplit Splited;
-	Splited.Entero  = Valor;
-	Mensaje[Cual]   = Splited.Partido[0];    // high bits
-	Mensaje[Cual++] = Splited.Partido[1];    // low  bits
-	*/
-// }
-
-void Skale::UtilTare() {
- // Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
-	std::lock_guard<std::mutex> lk(SkaleMutex); 
+void Scale::UtilTare() {
+	// Ojo: La creacion del objeto lock "lk", Bloquea Skale Mutex
+	std::lock_guard<std::mutex> lk(Scale::Mutex); 
 	Logger::trace("Skale Util Tare locks Skale Mutex to Udate");
- // Actualiza informacion de Tara
- // PesoRaw	      = ????                 Peso actual se asume actualizado
-	PesoConTara	   = 0x0000;          // Se reportara Cero
-	OffsetPaTara   = PesoRaw;         // PesoCrudo actual es la nueva base (offset)
-	DiferenciaPeso = 0x0000;
- // Se asume estabilidad x un momento
-	MessagePckt[1] = SKALESTABLE;     // 2o byte = Parm Estabilidad
- //	MessagePckt[2] = PesoConTara;     // 3o y 4o. bytes Peso 
-	_injctvalNvect(PESO,       PesoConTara,    MessagePckt);
- //	MessagePckt[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
-	_injctvalNvect(DIFERENCIA, DiferenciaPeso, MessagePckt);	           
- // Calcular y actualizar nueva paridad
-	MessagePckt[6] = calcXor(MessagePckt);      
- // Ojo: El termino del scope y destruccion del objeto, libera Skale Mutex
+	// Actualiza informacion de Tara
+	// PesoRaw	      = ????                 Peso actual se asume actualizado
+	Scale::PesoConTara	  = 0x0000;          // Se reportara Cero
+	Scale::OffsetPaTara   = Scale::PesoRaw;         // PesoCrudo actual es la nueva base (offset)
+	Scale::DiferenciaPeso = 0x0000;
+	// Se asume estabilidad x un momento
+	Scale::MessagePckt[1] = SKALESTABLE;     // 2o byte = Parm Estabilidad
+	//	MessagePckt[2] = PesoConTara;     // 3o y 4o. bytes Peso 
+	_injctvalNvect(PESO,       Scale:: PesoConTara,    Scale::MessagePckt);
+	//	MessagePckt[4] = DiferenciaPeso;  // 5o y 6o. bytes Diferencia Peso 
+	_injctvalNvect(DIFERENCIA, Scale::DiferenciaPeso,  Scale::MessagePckt);	           
+	// Calcular y actualizar nueva paridad
+	Scale::MessagePckt[6] =  Scale::calcXor(Scale::MessagePckt);      
+	// Ojo: El termino del scope y destruccion del objeto, libera Skale Mutex
 	Logger::trace("Util Tare Unlock Skale Mutex");
 }
 
-guint8 Skale::calcXor(std::vector<guint8> vector) {
+guint8 Scale::calcXor(std::vector<guint8> vector) {
 	static guint8 TmpXor = vector[0];
 	for (int i=1; i<=5; i++)
 		{ TmpXor = TmpXor ^ vector[i]; }
 	return (TmpXor);	 
 }
-
-// int16_t Skale::UtilCurrentPesoHW()
-// {
-//  // NO Logger --- Se llama cada decima de segundo  
-//  // int16_t TmpLeePesoRaw =  0xabcd;
-//  // Tempo: Numeros Aleatorios
-//  // INT16_MAX es "Macro constants"
-// 	return  rand() % INT16_MAX;
-// }

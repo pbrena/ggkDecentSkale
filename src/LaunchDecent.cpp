@@ -24,24 +24,18 @@
 #include "../include/Gobbledegook.h"
 #include "SkaleDatServer.h"
 
-//
-// Constants
-//
-
 // Maximum time to wait for any single async process to timeout during initialization
-static const int kMaxAsyncInitTimeoutMS = 30 * 1000;
+#define TIMEOUTms (30 * 1000)
 
-//
-// Server data Buffer (Getter/Setter Use) Antes: Server data values
-//
 
-std::vector<guint8> DataServCharVectorBuffr;
-std::vector<guint8> KomndCharVectorBuffr;
+Scale DecentSkale; // Create Scale Structure
+// Server data Buffers (Getter/Setter Use) Antes: Server data values
+std::vector<guint8> MesgBufr;
+std::vector<guint8> KomdBufr;
 
 //
 // Logging
 //
-
 enum LogLevel {
 	Debug,
 	Verbose,
@@ -67,7 +61,6 @@ void LogTrace(const char *pText) { std::cout << "-Trace-: " << pText << std::end
 //
 // Signal handling
 //
-
 // We setup a couple Unix signals to perform graceful shutdown in the case of SIGTERM or get an SIGING (CTRL-C)
 void signalHandler(int signum) {
 	switch (signum)
@@ -86,7 +79,6 @@ void signalHandler(int signum) {
 //
 // Data Server management
 //
-
 // Called by the ggk server when it wants to retrieve a value 
 //
 // This method conforms to `GGKServerDataGetter` and is passed to the server via our call to `ggkStart()`.
@@ -102,19 +94,18 @@ const void *dataGetter(const char *pName) {
 
 	if ( strName == "ReadNotify" ) {
 	 // Erases all previous Buffer contens
-		DataServCharVectorBuffr.clear();
+		MesgBufr.clear();
 	 // Copia el contenido de la respuesta de Skale al buffer de datos
 	 // unico llamado a CurrentPacket es thread safe
-		DataServCharVectorBuffr =  Skale::getInstance().CurrentPacket();
-		// copy(TempV.begin(), TempV.end(), back_inserter(DataServCharVectorBuffr));
-		LogDebug("Data getter: The pointer &DataServCharVectorBuffr replied"); 
-		return &DataServCharVectorBuffr;
+		MesgBufr =  DecentSkale.CurrentPacket();
+		// copy(TempV.begin(), TempV.end(), back_inserter(MesgBufr));
+		LogDebug("Data getter: The pointer &MesgBufr replied"); 
+		return &MesgBufr;
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack ")
 		{ LogError("Warning Data getter: Write caller requested Data, Null send"); }
 	else  
 		{ LogError((std::string("Data getter, wrong caller name: '") + strName + "'").c_str()); }
-
 	return nullptr;
 }
 // Called by the server when it wants to update a named value
@@ -140,11 +131,11 @@ int dataSetter(const char *pName, const void *pData) {
 	}
 	else if ( strName == "WriteWoResp" || strName ==  "WriteBack") { 
 		// Erases all previous Buffer contens
-		KomndCharVectorBuffr.clear();
+		KomdBufr.clear();
 		// Aqui parace resolver el valor enviado (vector) por el write a partir del apuntador
-		KomndCharVectorBuffr = *static_cast<const std::vector<guint8> *>(pData);
+		KomdBufr = *static_cast<const std::vector<guint8> *>(pData);
 		 // Ojo llama al procesador de comandos que es boolano
-		if ( !Skale::getInstance().ProcesKmd(KomndCharVectorBuffr) ) { 
+		if ( !DecentSkale.ProcesKmd(KomdBufr) ) { 
 			LogError("Warning: ProcesKmd -> false, fallo"); 
 			return 0; 
 		} 
@@ -207,19 +198,19 @@ int main(int argc, char **ppArgv) {   // Arrmts count #, Actual String Arguments
 	//     for more information.
 	//
 	// The so called (Gatt) Server  (different from Data Server)
-	if (!ggkStart("decentscale", "Decent Scale", "Decent Scale", dataGetter, dataSetter, kMaxAsyncInitTimeoutMS))
+	if (!ggkStart("decentscale", "Decent Scale", "Decent Scale", dataGetter, dataSetter, TIMEOUTms))
 		{ return -1; }
 	// Other Stuff can be executed while Wait for the servers shutdown process
 	
 	// Start the (Skale) Data server Continous process in its own Thread
-	if (!Skale::getInstance().start())
+	if (!DecentSkale.start())
 		{ return -1; }
 	// Wait for the server to come to a complete stop (CTRL-C from the command line)
 	if (!ggkWait()) {
 		return -1;
 	}	
 	// Stop Data Server
-	if (!Skale::getInstance().stop()) {
+	if (!DecentSkale.stop()) {
 		return -1;
 	}
 	// Return the final server health status as a success (0) or error (-1)

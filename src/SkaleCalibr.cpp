@@ -38,7 +38,7 @@ SimpleHX711* tmphxChip;
 int main() {
     try { tmphxChip = new SimpleHX711( 
 							HWDATAPIN,   // hw <- Constantes del Alambreado y de la Electronica  
-							hWCLOKPIN,  
+							HWCLOKPIN,  
 			                	1,       // Numeros iniciales, requeridos para determinar los
     				            0,       // valores reales a traves el proceso de cßalibracion
     						HWCHIPRATE );              
