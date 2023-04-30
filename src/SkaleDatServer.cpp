@@ -187,6 +187,8 @@ void  Scale::runContThread() {
 	if  ( 0 == zeroParm) {
 		Logger::error("runCont Thread: SKALE MUST NEED CALIBRATION, Run command ./src/SkaleCalibr");
 		return;
+	} else {
+		Logger::trace("runCont Thread: Calibration file read");
 	}
 
 	// Construct an AdvancedHX711 object according with GPIO phisical wired pins and 
@@ -205,14 +207,16 @@ void  Scale::runContThread() {
 	catch(const HX711::TimeoutException& ex) {
 		Logger::error("runCont Thread: FATAL! Timedout connecting to HX711");
 		return;
-	}
+	} 
 	// ELSE: loop Continuo hasta que el HW este listo
 	while ( !Scale::chipHx711->isReady() ) { 
 		Scale::chipHx711->powerUp(); 
 		std::this_thread::sleep_for(std::chrono::milliseconds(RESCANTIMEMS));
-		Logger::error("runCont Thread: HX711 not ready! Retrying...");
+		Logger::debug("runCont Thread: HX711 not ready! Retrying...");
 	}
 	// ELSE: loop Continuo hasta que la bandera sea actualizada por stop()
+	Logger::info("runCont Thread: HX711 finaly Ready!");
+	Logger::info("runCont Thread: entering continous skale data update thread...");
 	while (TmpContBandera) {
 		// Pace the cicles  
 		std::this_thread::sleep_for(std::chrono::milliseconds(RESCANTIMEMS));
@@ -246,7 +250,7 @@ void  Scale::runContThread() {
 		// el paso del tiempo pues el peso (y por tanto el mensaje) puede variar
 		// o no.
 		if (0 == ggkNofifyUpdatedCharacteristic("/com/decentscale/decentscale/ReadNotify"))
-		{ Logger::error("runCont Thread: Fallo ggkNofifyUpdatedCharacteristic"); }
+		{ Logger::debug("runCont Thread: Fallo ggkNofifyUpdatedCharacteristic"); }
 	}
 	Logger::trace("Leaving the Skale runCont Thread");
 }

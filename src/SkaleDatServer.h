@@ -31,8 +31,8 @@
 //
 
 // hw - Info for the use of the externam Electronic Chip hx711
-#define HWDATAPIN		2	
-#define HWCLOKPIN		3	// pins - GPIO
+#define HWCLOKPIN		14	// pins - GPIO
+#define HWDATAPIN		15	
 #define just1SAMPLE		1 	// hx711  parms
 #define HWCHIPRATE		HX711::Rate::HZ_80 
 

@@ -28,6 +28,7 @@ Other ReCompile comand sequence
 	make distclean
 	autoreconf -f -i
 	./configure
+	
 	make 
 
 To use Distcc
