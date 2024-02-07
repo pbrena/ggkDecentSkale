@@ -1,0 +1,13 @@
+#!/bin/bash
+
+##
+##  Cuerpo del procedimento (RSync)
+##
+
+rsync -PaHxvv --no-o --no-g --no-perms --numeric-ids --delete-during                   \
+              --rsync-path="nice -n15 rsync" -e 'ssh -x -T -v -o  Compression=no'      \
+              awiwi@192.168.100.100:~/Developer/ggkDecentSkale/      ~/ggkDecentSkale
+
+## rsync -PaHxvv --no-o --no-g --no-perms --numeric-ids --delete-during --rsync-path="nice -n15 rsync" -e 'ssh -x -T -v -p 32122 -o  Compression=no' /Volumes/HDD/Spiegel/ root@192.168.100.1:/mnt/sda1/Spiegel/  
+##  rsync --times --recursive --partial --progress --verbose --stats --delete-during  --exclude=".*"  /Volumes/HDD/Spiegel/  rsync://awiwi@192.168.100.1:32873/JechuSpiegel/  >>  ~/JechuBack2Nas.log
+## exit

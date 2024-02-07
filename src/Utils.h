@@ -35,6 +35,7 @@
 #include <vector>
 #include <string>
 #include <endian.h>
+#include <cstdint>  // After error in 2024 'uint8_t' has not been declared
 
 #include "DBusObjectPath.h"
 

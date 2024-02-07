@@ -64,13 +64,13 @@ int main() {
     //known weight prompt
     cout    << endl
             << "1) Enter the weight of the object in gr. (Numbers only, eg. 13.7): ";
-    cin >> knownWeight;
+    cin     >> knownWeight;
     cin.ignore();
     
     //samples prompt
     cout    << endl
             << "2) Enter the number of samples to take from the HX711 chip (eg. 15): ";
-    cin >> samples;
+    cin     >> samples;
     cin.ignore();
 
     //tare prompt
@@ -93,7 +93,7 @@ int main() {
     delete tmphxChip;
 
     if(refUnit == 0) {
-        refUnit = 1;
+       refUnit  = 1;
     }
 
     cout    << endl << endl

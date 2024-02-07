@@ -39,6 +39,14 @@ During development:
 	sudo tail -f /var/log/messages | grep lue
 	sudo dbus-monitor --system
 	sudo ./src/LaunchDecent -d
+	
+utilities:
+	to calibrate and save calibration in configuration file
+	./src/SkaleCalibr
+	to print configuration file
+	./src/SkalePrtConfig 
+	to run bluetooth skale
+	sudo ./src/LaunchDecent sudo ./src/LaunchDecent 
 
 ******************************************************************************************
 *    End
